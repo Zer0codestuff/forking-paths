@@ -156,39 +156,34 @@ def planned_count(plan: dict) -> dict:
     return {"planned": len(specs), "limit": limit, "willRun": min(limit, len(specs)), "uncomputed": max(0, len(specs) - limit)}
 
 
-def _normalize(x: np.ndarray, method: str, direction: str) -> tuple[np.ndarray | None, str | None]:
-    lo, hi = np.min(x), np.max(x)
-    if method == "minmax":
-        if hi == lo:
-            return None, "constant"
-        z = (x - lo) / (hi - lo) if direction == "higher" else (hi - x) / (hi - lo)
-    elif method == "zscore":
-        if len(x) < 2:
-            return None, "too few entities for a sample standard deviation"
-        sd = np.std(x, ddof=1)
-        if sd == 0:
-            return None, "constant"
-        z = (x - np.mean(x)) / sd
-        if direction == "lower":
-            z = -z
-    elif method == "rank":
-        if hi == lo:
-            return None, "constant"
-        from scipy.stats import rankdata
+def _normalize_all(X: np.ndarray, method: str, directions: list[str]) -> tuple[np.ndarray, list[str | None]]:
+    """Normalize every column at once. Returns the matrix and a per-column problem (or None)."""
+    lower = np.array([d == "lower" for d in directions])
+    lo, hi = X.min(axis=0), X.max(axis=0)
+    const = hi == lo
+    problems: list[str | None] = ["constant" if c else None for c in const]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        if method == "minmax":
+            rng = np.where(const, 1.0, hi - lo)
+            Z = np.where(lower, (hi - X) / rng, (X - lo) / rng)
+        elif method == "zscore":
+            if X.shape[0] < 2:
+                return X, ["too few entities for a sample standard deviation"] * X.shape[1]
+            sd = X.std(axis=0, ddof=1)
+            problems = ["constant" if s == 0 else None for s in sd]
+            Z = (X - X.mean(axis=0)) / np.where(sd == 0, 1.0, sd)
+            Z = np.where(lower, -Z, Z)
+        elif method == "rank":
+            from scipy.stats import rankdata
 
-        r = rankdata(x, method="average")
-        z = (r - 0.5) / len(x)
-        if direction == "lower":
-            z = 1.0 - z
-    elif method == "target":
-        if lo <= 0:
-            return None, "non-positive values (target normalization requires x > 0)"
-        if hi == lo:
-            return None, "constant"
-        z = x / hi if direction == "higher" else lo / x
-    else:
-        raise PlanError(f"Unknown normalization {method!r}")
-    return z, None
+            Z = (rankdata(X, method="average", axis=0) - 0.5) / X.shape[0]
+            Z = np.where(lower, 1.0 - Z, Z)
+        elif method == "target":
+            problems = ["non-positive values (target normalization requires x > 0)" if l <= 0 else ("constant" if c else None) for l, c in zip(lo, const)]
+            Z = np.where(lower, lo / X, X / np.where(hi == 0, 1.0, hi))
+        else:
+            raise PlanError(f"Unknown normalization {method!r}")
+    return Z, problems
 
 
 def _round_sig(a: np.ndarray, digits: int) -> np.ndarray:
@@ -205,6 +200,17 @@ def _rank(scores: np.ndarray, ties: str) -> np.ndarray:
 
     r = rankdata(-_round_sig(scores, SCORE_SIGNIFICANT_DIGITS), method="min" if ties == "min" else "average")
     return r.astype(float)
+
+
+class _Count(dict):
+    """Exclusion count without building per-entity reason strings (batch runs)."""
+
+    def __init__(self, n: int):
+        super().__init__()
+        self.n = n
+
+    def __len__(self) -> int:
+        return self.n
 
 
 @dataclass
@@ -239,13 +245,16 @@ def compute_spec(prep: Prepared, spec: Spec, plan: dict, detail: bool = False) -
     """Run one specification. Returns scores and ranks over all entities (NaN where excluded)."""
     n_all = len(prep.entity_ids)
     X = prep.matrix.copy()
-    excluded: dict[int, str] = {}
     miss = np.isnan(X)
     if spec.missing == "exclude":
-        for r in np.where(miss.any(axis=1))[0]:
-            cols = [prep.names[j] for j in np.where(miss[r])[0]]
-            excluded[int(r)] = f"missing {', '.join(cols)}"
+        keep = ~miss.any(axis=1)
+        if detail:
+            excluded: dict[int, str] | _Count = {int(r): "missing " + ", ".join(prep.names[j] for j in np.where(miss[r])[0]) for r in np.where(~keep)[0]}
+        else:
+            excluded = _Count(int((~keep).sum()))
     else:
+        keep = np.ones(n_all, dtype=bool)
+        excluded = {} if detail else _Count(0)
         for j in range(X.shape[1]):
             obs = X[~miss[:, j], j]
             if len(obs) == 0:
@@ -255,24 +264,23 @@ def compute_spec(prep: Prepared, spec: Spec, plan: dict, detail: bool = False) -
             else:
                 fill = float(np.min(obs) if prep.directions[j] == "higher" else np.max(obs))
             X[miss[:, j], j] = fill
-    keep = np.array([r not in excluded for r in range(n_all)])
     if keep.sum() < 2:
         return {"status": "invalid", "reason": f"Only {int(keep.sum())} entities remain after the missing-data rule", "excluded": excluded}
     Xk = X[keep]
-    used, Z, notes = [], [], []
+    used, notes = [], []
     constant_rule = plan.get("constantRule", "invalid")
+    Zall, problems = _normalize_all(Xk, spec.normalization, prep.directions)
     for j, name in enumerate(prep.names):
-        z, problem = _normalize(Xk[:, j], spec.normalization, prep.directions[j])
+        problem = problems[j]
         if problem == "constant" and constant_rule == "drop":
             notes.append(f"Dropped constant indicator {name}; remaining weights renormalized")
             continue
         if problem:
             return {"status": "invalid", "reason": f"{spec.normalization} normalization undefined for {name}: {problem}", "excluded": excluded}
         used.append(j)
-        Z.append(z)
     if len(used) < 1:
         return {"status": "invalid", "reason": "No indicator left after dropping constant indicators", "excluded": excluded}
-    Z = np.column_stack(Z)
+    Z = Zall[:, used] if len(used) < Zall.shape[1] else Zall
     w = np.array([spec.weights[prep.names[j]] for j in used], dtype=float)
     if w.sum() <= 0:
         return {"status": "invalid", "reason": "Weights of the remaining indicators sum to zero", "excluded": excluded}
@@ -314,23 +322,44 @@ def plan_key(dataset_hash: str, plan: dict, runtime: dict) -> str:
 
 def summarize(prep: Prepared, specs: list[Spec], ranks: np.ndarray, top_k: int) -> dict:
     """Per-entity rank distributions over valid specifications. ranks: specs x entities, NaN when excluded/invalid."""
-    valid = np.array([s.status == "valid" for s in specs])
+    valid = np.array([s.status == "valid" for s in specs], dtype=bool)
     R = ranks[valid] if valid.any() else np.zeros((0, len(prep.entity_ids)))
+    evaluated = (~np.isnan(R)).sum(axis=0)
     entities = []
+    if R.shape[0]:
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # all-NaN columns are reported as not evaluated
+            mean = np.nanmean(R, axis=0)
+        # Linear-interpolation quantiles (NumPy's default method) for every entity at once:
+        # sorting puts NaN last, so each column's first `evaluated` values are its ranks.
+        Rs = np.sort(R, axis=0)
+        nn = np.maximum(evaluated, 1)
+        q = np.empty((7, R.shape[1]))
+        for qi, p in enumerate((0.0, 0.05, 0.25, 0.5, 0.75, 0.95, 1.0)):
+            pos = p * (nn - 1)
+            i0 = np.floor(pos).astype(int)
+            i1 = np.minimum(i0 + 1, nn - 1)
+            t = pos - i0
+            a = np.take_along_axis(Rs, i0[None, :], 0)[0]
+            b = np.take_along_axis(Rs, i1[None, :], 0)[0]
+            q[qi] = a + (b - a) * t
+        ranked = ~np.isnan(R)
+        top = np.where(ranked, R <= top_k, False).sum(axis=0)
+        best = np.where(ranked, R == 1, False).sum(axis=0)
     for e, eid in enumerate(prep.entity_ids):
-        col = R[:, e]
-        col = col[~np.isnan(col)]
-        if len(col) == 0:
+        n = int(evaluated[e])
+        if n == 0:
             entities.append({"id": eid, "evaluated": 0})
             continue
-        q = np.quantile(col, [0.0, 0.05, 0.25, 0.5, 0.75, 0.95, 1.0])
         entities.append({
             "id": eid,
-            "evaluated": int(len(col)),
-            "min": float(q[0]), "p05": float(q[1]), "p25": float(q[2]), "median": float(q[3]), "p75": float(q[4]), "p95": float(q[5]), "max": float(q[6]),
-            "mean": float(col.mean()),
-            "topK": float(np.mean(col <= top_k)),
-            "best": float(np.mean(col == 1)),
+            "evaluated": n,
+            "min": float(q[0, e]), "p05": float(q[1, e]), "p25": float(q[2, e]), "median": float(q[3, e]), "p75": float(q[4, e]), "p95": float(q[5, e]), "max": float(q[6, e]),
+            "mean": float(mean[e]),
+            "topK": float(top[e] / n),
+            "best": float(best[e] / n),
         })
     counts = {k: sum(1 for s in specs if s.status == k) for k in ("valid", "invalid", "cancelled", "uncomputed")}
     return {"entities": entities, "counts": counts, "topK": top_k, "topKNote": f"Fraction of the {int(valid.sum())} evaluated valid specifications in which the entity ranks in the top {top_k}. It describes the declared specification space, not the probability that a ranking is true."}

@@ -65,7 +65,7 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; }
 .view-key { color: var(--fg-3); font-size: 11px; }
 .runtime { margin-left: auto; }
 .project-line { display: flex; gap: 12px; align-items: center; padding: 8px 0; flex-wrap: wrap; }
-.title-input { background: transparent; border: 1px solid transparent; font-family: var(--display); font-size: 15px; font-weight: 600; padding: 2px 4px; min-width: 0; max-width: 100%; }
+.title-input { width: min(100%, 44ch); background: transparent; border: 1px solid transparent; font-family: var(--display); font-size: 15px; font-weight: 600; padding: 2px 4px; min-width: 0; max-width: 100%; }
 .title-input:hover, .title-input:focus { border-color: var(--line-2); }
 .notice { border: 1px solid var(--line-2); background: var(--panel); padding: 8px 10px; margin: 8px 0; border-radius: 2px; }
 .notice.bad { border-color: rgba(255, 70, 70, 0.6); background: rgba(255, 70, 70, 0.09); }
@@ -125,8 +125,8 @@ progress::-moz-progress-bar { background: var(--ok); }
 .two-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
 
 .chart-wrap { width: 100%; overflow-x: auto; }
-.chart { width: 100%; height: auto; display: block; min-width: 560px; }
-.scatter .chart { min-width: 300px; max-width: 520px; }
+.chart { height: auto; display: block; max-width: none; }
+.scatter .chart { width: 100%; max-width: 520px; }
 .chart .grid { stroke: rgba(255, 255, 255, 0.09); }
 .chart .grid.strong { stroke: rgba(60, 220, 120, 0.45); stroke-dasharray: 3 3; }
 .chart .axis { fill: var(--fg-3); font: 11px var(--body); }
@@ -180,7 +180,6 @@ progress::-moz-progress-bar { background: var(--ok); }
   .kv dt { margin-top: 6px; }
   .form-grid .span2 { grid-column: auto; }
   .decision-grid { grid-template-columns: minmax(0, 1fr); }
-  .chart { min-width: 520px; }
   .opt-bar { grid-template-columns: 90px minmax(60px, 1fr); }
   .opt-bar > span:last-child { grid-column: 1 / -1; color: var(--fg-3); }
   .run-bar { flex-direction: column; align-items: stretch; }

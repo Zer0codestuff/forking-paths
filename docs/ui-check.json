@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-08T14:52:12.738Z",
+  "generatedAt": "2026-11-08T15:04:40.580Z",
   "browser": "Chromium headless (Playwright)",
   "timings": {
-    "coldLoadAndRunMs": 10296,
-    "warmRunMs": 674
+    "coldLoadAndRunMs": 11382,
+    "warmRunMs": 545
   },
   "results": [
     {
@@ -108,6 +108,21 @@
     },
     {
       "name": "time-ordered rows block every interval method before running",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "real case study shows license and source",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "specifications beyond the limit are reported as uncomputed",
+      "ok": true,
+      "detail": "valid 338invalid 174cancelled 0uncomputed 268"
+    },
+    {
+      "name": "the computed subset is described",
       "ok": true,
       "detail": ""
     },

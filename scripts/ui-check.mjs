@@ -166,6 +166,22 @@ try {
   expect('time-ordered rows block every interval method before running', (await p2.textContent('fieldset:has(legend:text("interval"))')).match(/blocked/g)?.length >= 3);
   await p2.close();
 
+  // 8b. Real case study (World Bank WDI): provenance shown, limit applied as a seeded subset.
+  const p3 = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  watch(p3);
+  await p3.goto(base + '?example=wdi-eu27-2022');
+  await p3.waitForSelector('text=Accepted dataset');
+  const prov = await p3.textContent('.data-view');
+  expect('real case study shows license and source', /CC BY 4.0/.test(await p3.inputValue('input[placeholder="unknown"] >> nth=1')) || /CC BY 4.0/.test(prov));
+  await view(p3, 'Decisions');
+  await runAndWait(p3);
+  const c3 = await p3.textContent('.counts');
+  expect('specifications beyond the limit are reported as uncomputed', /uncomputed\s*268/.test(c3), c3);
+  expect('the computed subset is described', /seeded|random subset/.test(await p3.textContent('.result-meta')));
+  await p3.waitForSelector('.spec-detail', { timeout: 60000 });
+  await p3.screenshot({ path: `${OUT}/desktop-1440-wdi.png` });
+  await p3.close();
+
   // 9. Viewport bounds and screenshots at the required widths.
   for (const [w, h] of [[1440, 900], [1024, 768], [768, 1024], [390, 844]]) {
     const p = await browser.newPage({ viewport: { width: w, height: h } });

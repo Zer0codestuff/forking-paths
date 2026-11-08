@@ -133,7 +133,8 @@ export interface RankingResult extends ResultBase {
   specs: RankingSpec[];
   summary: { entities: EntitySummary[]; counts: Record<SpecStatus, number>; topK: number; topKNote: string };
   digest: Record<string, string>;
-  arrays: { shape: [number, number]; ranks: string; scores: string };
+  /** Base64 text in bundles; typed arrays (ranksData, scoresData) inside the app. */
+  arrays: { shape: [number, number]; ranks?: string; scores?: string; external?: boolean; ranksData?: Float32Array; scoresData?: Float64Array };
 }
 
 export interface RelationshipSpec {

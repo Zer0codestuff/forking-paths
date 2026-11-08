@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { toCsv } from '../lib/csv';
-import { buildBundle, downloadText, fingerprint, isCurrent, newId, parseBundle, projectFromBundle } from '../lib/project';
+import { buildBundle, downloadText, fingerprint, isCurrent, newId, parseBundle, portableResult, projectFromBundle } from '../lib/project';
 import { reportHtml } from '../lib/report';
 import type { Bundle, Project, RunRecord } from '../lib/types';
 import type { Engine } from '../worker/client';
@@ -63,7 +63,7 @@ export function ExportView({ project, setProject, engine, ensureEngine }: Props)
         const fresh = (await promise).record;
         const match = imported.results.find((r) => r.planHash === fresh.planHash);
         if (match) {
-          const cmp = await engine.call('compare', JSON.stringify(match), JSON.stringify(fresh));
+          const cmp = await engine.call('compare', JSON.stringify(match), JSON.stringify(portableResult(fresh)));
           for (const c of cmp.checks as Check[]) out.push({ ...c, name: `${plan.title}: ${c.name}` });
         } else out.push({ name: `${plan.title}`, ok: true, detail: 'no stored result for this plan; computed fresh' });
         runs.push({ id: newId('run'), planId: p.plans[i].id, fingerprint: fingerprint(plan, imported.dataset.hash), plan, datasetHash: imported.dataset.hash, elapsedMs: 0, cancelled: false, result: fresh });

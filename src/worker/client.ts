@@ -72,6 +72,12 @@ export class Engine {
     return this.send<{ record: any; cancelled: boolean; elapsedMs: number }>({ type: 'run', dataset: JSON.stringify(dataset), plan: JSON.stringify(plan), batch }, onProgress);
   }
 
+  /** Make sure the worker holds this result's rank matrix (it is lost when the page reloads). */
+  async ensureRanks(key: string, data: Float32Array, shape: [number, number]): Promise<void> {
+    if (await this.call<boolean>('has_ranks', key)) return;
+    await this.send<boolean>({ type: 'putRanks', key, data, shape }).promise;
+  }
+
   cancel(id: number) {
     this.worker?.postMessage({ type: 'cancel', target: id } satisfies WorkerRequest);
   }

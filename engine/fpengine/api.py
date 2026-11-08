@@ -17,6 +17,8 @@ from . import ENGINE_VERSION, SCHEMAS, ranking, relationship, runtime_info
 from .canonical import canonical_json, dataset_hash, hash_json
 
 _SESSIONS: dict[str, dict] = {}
+_RANKS: dict[str, np.ndarray] = {}  # worker-side cache of finished rank matrices, by result key
+_PENDING: dict[str, tuple[bytes, bytes]] = {}
 
 
 def b64(a: np.ndarray, dtype: str) -> str:
@@ -134,7 +136,7 @@ def run_batch(key: str, count: int) -> str:
     return _json({"done": end, "limit": s["limit"], "finished": end >= s["limit"]})
 
 
-def finish(key: str, cancelled: bool = False, created_at: str | None = None) -> str:
+def finish(key: str, cancelled: bool = False, created_at: str | None = None, binary: bool = False) -> str:
     """Close the session and return the full result record. Specs not reached are 'cancelled' if
     the user stopped the run, and specs beyond the limit are 'uncomputed'."""
     s = _SESSIONS.pop(key)
@@ -158,8 +160,13 @@ def finish(key: str, cancelled: bool = False, created_at: str | None = None) -> 
             "specs": [{**sp.describe(), "status": sp.status, "reason": sp.reason, "notes": sp.notes, "remaining": s["remaining"][i], "excludedCount": s["excludedCount"][i]} for i, sp in enumerate(specs)],
             "summary": ranking.summarize(s["prep"], specs, s["ranks"], top_k),
             "digest": ranking.result_digest(specs, s["scores"], s["ranks"]),
-            "arrays": {"shape": list(s["ranks"].shape), "ranks": b64(s["ranks"], "<f4"), "scores": b64(s["scores"], "<f8")},
+            "arrays": {"shape": list(s["ranks"].shape), "ranks": b64(s["ranks"], "<f4"), "scores": b64(s["scores"], "<f8")} if not binary else {"shape": list(s["ranks"].shape), "external": True},
         }
+        if binary:
+            # The browser receives the matrices as transferable binary buffers (see take_arrays)
+            # instead of base64 text inside JSON, which roughly halves peak memory for large runs.
+            _PENDING[key] = (np.ascontiguousarray(s["ranks"], dtype="<f4").tobytes(), np.ascontiguousarray(s["scores"], dtype="<f8").tobytes())
+            _RANKS[key] = s["ranks"].astype("<f4")
     else:
         specs = s["specs"]
         results = []
@@ -238,3 +245,30 @@ def compare(stored_json: str, fresh_json: str) -> str:
 
     checks = compare_results(_load(stored_json), _load(fresh_json))
     return _json({"ok": all(c["ok"] for c in checks), "checks": checks, "tolerance": TOLERANCE})
+
+
+def take_arrays(key: str) -> tuple[bytes, bytes]:
+    return _PENDING.pop(key)
+
+
+def put_ranks(key: str, data: Any, shape: list[int]) -> str:
+    """Repopulate the rank cache from a stored result (after a reload)."""
+    _RANKS[key] = np.frombuffer(bytes(data), dtype="<f4").reshape(tuple(shape)).copy()
+    return _json({"ok": True})
+
+
+def has_ranks(key: str) -> str:
+    return _json(key in _RANKS)
+
+
+def query_pairwise_cached(key: str, valid: list[bool], idx: list[int]) -> str:
+    return _json(_clean(ranking.pairwise(_RANKS[key].astype(float), np.array(valid, dtype=bool), idx)))
+
+
+def query_influence_cached(dataset_json: Any, plan_json: Any, key: str, statuses: list[str], entity: int) -> str:
+    dataset, plan = _load(dataset_json), _load(plan_json)
+    prep = ranking.prepare(dataset, plan)
+    specs = ranking.enumerate_specs(plan)
+    for sp, st in zip(specs, statuses):
+        sp.status = st
+    return _json(_clean(ranking.influence(prep, specs, _RANKS[key].astype(float), entity)))

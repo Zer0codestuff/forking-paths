@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Project, RelationshipPlan, RelationshipResult, RelationshipSpec } from '../lib/types';
 import type { Engine } from '../worker/client';
+import { niceTicks, useWidth } from './useWidth';
 
 interface Props {
   project: Project;
@@ -69,9 +70,10 @@ export function RelationshipResults({ project, plan, result, engine, ensureEngin
 }
 
 function Curve({ specs, plan, sel, onSel }: { specs: RelationshipSpec[]; plan: RelationshipPlan; sel: number | null; onSel: (i: number) => void }) {
+  const [ref, cw] = useWidth<HTMLDivElement>();
   const n = specs.length;
   if (!n) return <p className="muted small">No valid specification for this estimand.</p>;
-  const W = 1000, l = 70, r = 16, top = 12, plotH = 230;
+  const W = Math.max(600, cw), l = 120, r = 16, top = 22, plotH = 230;
   const vals = specs.flatMap((s) => [s.estimate!, s.low ?? s.estimate!, s.high ?? s.estimate!]).concat([0]);
   let lo = Math.min(...vals), hi = Math.max(...vals);
   const pad = (hi - lo) * 0.08 || 1;
@@ -82,14 +84,14 @@ function Curve({ specs, plan, sel, onSel }: { specs: RelationshipSpec[]; plan: R
   const rowH = 16;
   const matTop = top + plotH + 26;
   const H = matTop + opts.reduce((a, o) => a + o.values.length * rowH + 8, 0) + 4;
-  const ticks = Array.from({ length: 5 }, (_, i) => lo + ((hi - lo) * i) / 4);
+  const ticks = niceTicks(lo, hi);
   let yy = matTop;
   return (
-    <div className="chart-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`Specification curve: ${n} estimates sorted from lowest to highest with intervals, and the decision matrix below. Use the table toggle for the same data.`}>
-        {ticks.map((t, i) => <g key={i}><line x1={l} x2={W - r} y1={y(t)} y2={y(t)} className="grid" /><text x={l - 6} y={y(t) + 4} className="axis" textAnchor="end">{f(t, 2)}</text></g>)}
+    <div className="chart-wrap" ref={ref}>
+      <svg width={W} viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`Specification curve: ${n} estimates sorted from lowest to highest with intervals, and the decision matrix below. Use the table toggle for the same data.`}>
+        {ticks.map((t, i) => <g key={i}><line x1={l} x2={W - r} y1={y(t)} y2={y(t)} className="grid" /><text x={l - 6} y={y(t) + 4} className="axis" textAnchor="end">{Number(t.toPrecision(6))}</text></g>)}
         <line x1={l} x2={W - r} y1={y(0)} y2={y(0)} className="zero" />
-        <text x={8} y={top + 10} className="axis">effect</text>
+        <text x={l} y={12} className="axis">estimated effect ({plan.outcomeUnit || 'outcome units'} per {plan.predictorUnit || 'unit'})</text>
         {specs.map((s, i) => (
           <g key={s.index} className={`pt${sel === s.index ? ' sel' : ''}`} onClick={() => onSel(s.index)} role="button" tabIndex={0} aria-label={`specification ${s.index}: estimate ${f(s.estimate)}`} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSel(s.index); } }}>
             <rect x={x(i) - (W - l - r) / n / 2} y={top} width={(W - l - r) / n} height={H - top} className="hit" />
@@ -113,7 +115,7 @@ function Curve({ specs, plan, sel, onSel }: { specs: RelationshipSpec[]; plan: R
           );
         })}
       </svg>
-      <p className="small muted">Points are estimates sorted from lowest to highest; vertical lines are {Math.round(plan.confidence * 100)}% intervals where the method is valid. Filled squares in the matrix show which option each specification used. Hollow points have no valid interval.</p>
+      <p className="small muted">Points are estimates sorted from lowest to highest; vertical lines are {Math.round(plan.confidence * 100)}% intervals where the method is valid. Filled squares in the matrix show which option each specification used. Green points: the interval excludes zero (not a test across specifications). Hollow points have no valid interval.</p>
     </div>
   );
 }

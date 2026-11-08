@@ -1,6 +1,6 @@
 import { accept, profile, tokenize, type AcceptOptions, type ParseSettings, type ParsedTable, type Profile } from './csv';
-import { base64ToBytes, bytesToBase64, datasetHash, sha256Hex } from './hash';
-import { APP_VERSION, SCHEMAS, type Bundle, type Dataset, type Plan, type Project, type RankingPlan, type RelationshipPlan, type Result, type RunRecord, type Source } from './types';
+import { base64ToBytes, bytesToBase64, datasetHash, decodeFloat32, decodeFloat64, sha256Hex } from './hash';
+import { APP_VERSION, SCHEMAS, type Bundle, type Dataset, type Plan, type Project, type RankingPlan, type RankingResult, type RelationshipPlan, type Result, type RunRecord, type Source } from './types';
 
 export function stableStringify(v: unknown): string {
   if (v === null || typeof v !== 'object') return JSON.stringify(v);
@@ -153,7 +153,7 @@ export function buildBundle(p: Project): Bundle {
     source: p.source,
     dataset: p.dataset,
     plans: p.plans.map((e) => e.plan),
-    results: current.map((r) => r.result),
+    results: current.map((r) => portableResult(r.result)),
     reproduction: {
       cli: 'pip install numpy scipy && cd engine && python -m fpengine reproduce <bundle.json>',
       browser: 'Open Forking Paths, choose Import project, select the bundle, then Reproduce.',
@@ -161,6 +161,23 @@ export function buildBundle(p: Project): Bundle {
     },
     limitations: LIMITATIONS,
   };
+}
+
+/** Result as stored in bundles: matrices as base64 text, never typed arrays. */
+export function portableResult(r: Result): Result {
+  if (r.workflow !== 'ranking' || !r.arrays.ranksData) return r;
+  const { ranksData, scoresData, external: _e, ...rest } = r.arrays;
+  void _e;
+  const u8 = (a: ArrayBufferView) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
+  return { ...r, arrays: { ...rest, ranks: bytesToBase64(u8(ranksData)), scores: bytesToBase64(u8(scoresData!)) } };
+}
+
+export function rankMatrix(r: RankingResult): Float32Array {
+  return r.arrays.ranksData ?? decodeFloat32(r.arrays.ranks!);
+}
+
+export function scoreMatrix(r: RankingResult): Float64Array {
+  return r.arrays.scoresData ?? decodeFloat64(r.arrays.scores!);
 }
 
 export function isCurrent(p: Project, r: RunRecord): boolean {

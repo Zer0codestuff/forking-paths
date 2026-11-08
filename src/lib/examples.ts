@@ -78,4 +78,33 @@ export const EXAMPLES: Example[] = [
       bootstrap: { replicates: 499, seed: 1 },
     },
   },
+  {
+    id: 'wdi-eu27-2022',
+    title: 'EU-27 development indicators 2022 (real data, World Bank WDI)',
+    file: 'examples/wdi-eu27-2022.csv',
+    workflow: 'ranking',
+    summary: 'Real data: six World Development Indicators for the 27 EU member states in 2022. A simplified teaching adaptation, not an official index: the indicator set and directions are illustrative. Note that gross tertiary enrollment can exceed 100% (Greece) or be low where many students study abroad (Luxembourg), and the Netherlands has no 2022 value, so the missing-data rule matters.',
+    source: {
+      url: 'https://datacatalog.worldbank.org/search/dataset/0037712/World-Development-Indicators',
+      retrievedAt: '2026-11-08',
+      license: 'CC BY 4.0 (World Bank, World Development Indicators)',
+      licenseVerified: true,
+      citation: 'The World Bank, World Development Indicators (last updated 2026-10-08), series NY.GDP.PCAP.PP.KD, SP.DYN.LE00.IN, SL.UEM.TOTL.ZS, EN.GHG.CO2.PC.CE.AR5, IT.NET.USER.ZS, SE.TER.ENRR, year 2022. Retrieved with scripts/fetch_wdi.py.',
+      notes: 'License checked on the WDI catalog entry and the World Bank public licenses page. Values copied unchanged from the API. Full request URLs: public/examples/wdi-eu27-2022.provenance.json.',
+      synthetic: false,
+    },
+    units: { gdp_pc_ppp: 'constant 2021 international $', life_expectancy: 'years', unemployment: '% of labor force', co2_pc: 't CO2e per person', internet_users: '% of population', tertiary_enrollment: '% gross enrollment' },
+    ranking: { entity: 'country', directions: { gdp_pc_ppp: 'higher', life_expectancy: 'higher', unemployment: 'lower', co2_pc: 'lower', internet_users: 'higher', tertiary_enrollment: 'higher' } },
+    rankingOverrides: (p) => ({
+      ...p,
+      title: 'EU-27 composite (teaching example)',
+      decisions: {
+        ...p.decisions,
+        aggregation: { options: [
+          { id: 'arithmetic', rationale: 'Full compensation between indicators.' },
+          { id: 'geometric', rationale: 'Partial compensation; only defined for strictly positive normalized values.' },
+        ] },
+      },
+    }),
+  },
 ];

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { decodeFloat32, decodeFloat64 } from '../lib/hash';
+import { rankMatrix, scoreMatrix } from '../lib/project';
 import type { EntitySummary, Project, RankingPlan, RankingResult } from '../lib/types';
 import type { Engine } from '../worker/client';
+import { useWidth } from './useWidth';
 
 interface Props {
   project: Project;
@@ -18,8 +19,15 @@ const num = (v: number, d = 3) => (Number.isFinite(v) ? Number(v.toFixed(d)).toS
 export function RankingResults({ project, plan, result, engine, ensureEngine, inspectable }: Props) {
   const E = result.entities.length;
   const [S] = result.arrays.shape;
-  const ranks = useMemo(() => decodeFloat32(result.arrays.ranks), [result]);
-  const scores = useMemo(() => decodeFloat64(result.arrays.scores), [result]);
+  const ranks = useMemo(() => rankMatrix(result), [result]);
+  const scores = useMemo(() => scoreMatrix(result), [result]);
+  const cached = useMemo(() => ({ current: null as Promise<void> | null }), [result]);
+  const withRanks = async () => {
+    if (!(await ensureEngine())) return false;
+    cached.current ??= engine.ensureRanks(result.key, ranks, result.arrays.shape);
+    await cached.current;
+    return true;
+  };
   const byMedian = useMemo(() => [...result.summary.entities].map((e, i) => ({ ...e, idx: i })).sort((a, b) => (a.median ?? Infinity) - (b.median ?? Infinity) || a.id.localeCompare(b.id)), [result]);
   const [selected, setSelected] = useState<number[]>(() => byMedian.slice(0, 4).map((e) => e.idx));
   const [focus, setFocus] = useState<number>(() => byMedian[0]?.idx ?? 0);
@@ -38,14 +46,14 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
   useEffect(() => {
     let live = true;
     if (selected.length < 2) { setPair(null); return; }
-    void ensureEngine().then((ok) => ok && engine.call('query_pairwise', result.arrays.ranks, result.arrays.shape, valid, selected)).then((m) => { if (live && m) setPair({ idx: selected, m: m as any }); }, (e) => live && setQErr(String(e.message ?? e)));
+    void withRanks().then((ok) => ok && engine.call('query_pairwise_cached', result.key, valid, selected)).then((m) => { if (live && m) setPair({ idx: selected, m: m as any }); }, (e) => live && setQErr(String(e.message ?? e)));
     return () => { live = false; };
   }, [selected, result, valid, engine, ensureEngine]);
 
   useEffect(() => {
     let live = true;
     if (!inspectable) return;
-    void ensureEngine().then((ok) => ok && engine.call('query_influence', project.dataset, plan, result.arrays.ranks, result.arrays.shape, statuses, focus)).then((m) => { if (live && m) setInfl(m); }, (e) => live && setQErr(String(e.message ?? e)));
+    void withRanks().then((ok) => ok && engine.call('query_influence_cached', project.dataset, plan, result.key, statuses, focus)).then((m) => { if (live && m) setInfl(m); }, (e) => live && setQErr(String(e.message ?? e)));
     return () => { live = false; };
   }, [focus, result, plan, project.dataset, statuses, engine, ensureEngine, inspectable]);
 
@@ -142,12 +150,13 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
 }
 
 function RankChart({ rows, E, selected, focus, onToggle, onFocus, topK }: { rows: Array<EntitySummary & { idx: number }>; E: number; selected: number[]; focus: number; onToggle: (i: number) => void; onFocus: (i: number) => void; topK: number }) {
-  const W = 1000, rowH = 22, left = 150, right = 120, top = 26;
+  const [ref, cw] = useWidth<HTMLDivElement>();
+  const W = Math.max(600, cw), rowH = 24, left = 130, right = 90, top = 26;
   const x = (r: number) => left + ((r - 1) / Math.max(1, E - 1)) * (W - left - right);
   const ticks = [...new Set([1, Math.ceil(E / 4), Math.ceil(E / 2), Math.ceil((3 * E) / 4), E])];
   return (
-    <div className="chart-wrap">
-      <svg viewBox={`0 0 ${W} ${top + rows.length * rowH + 22}`} role="img" aria-label="Rank distribution per entity; an equivalent table is available with the table toggle" className="chart">
+    <div className="chart-wrap" ref={ref}>
+      <svg width={W} viewBox={`0 0 ${W} ${top + rows.length * rowH + 22}`} role="img" aria-label="Rank distribution per entity; an equivalent table is available with the table toggle" className="chart">
         {ticks.map((t) => <g key={t}><line x1={x(t)} x2={x(t)} y1={top - 6} y2={top + rows.length * rowH} className="grid" /><text x={x(t)} y={14} className="axis" textAnchor="middle">rank {t}</text></g>)}
         <line x1={x(topK + 0.5)} x2={x(topK + 0.5)} y1={top - 6} y2={top + rows.length * rowH} className="grid strong" />
         <text x={x(topK + 0.5)} y={top + rows.length * rowH + 14} className="axis" textAnchor="middle">top {topK} cut</text>

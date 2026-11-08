@@ -84,8 +84,28 @@ async function handle(m: WorkerRequest): Promise<void> {
         post({ type: 'progress', id: m.id, done: p.done, limit: p.limit, planned: started.planned, key: started.key });
       }
       cancelled.delete(m.id);
-      const record = JSON.parse(api.finish(started.key, wasCancelled, new Date().toISOString()));
-      post({ type: 'result', id: m.id, value: { record, cancelled: wasCancelled, elapsedMs: performance.now() - t0 } });
+      const record = JSON.parse(api.finish(started.key, wasCancelled, new Date().toISOString(), true));
+      const transfer: ArrayBuffer[] = [];
+      if (record.workflow === 'ranking') {
+        // Rank and score matrices arrive as binary buffers and are transferred, not copied.
+        const pair = api.take_arrays(started.key);
+        const [r, sc] = pair.toJs() as [Uint8Array, Uint8Array];
+        pair.destroy();
+        record.arrays.ranksData = new Float32Array(r.buffer, r.byteOffset, r.byteLength / 4);
+        record.arrays.scoresData = new Float64Array(sc.buffer, sc.byteOffset, sc.byteLength / 8);
+        transfer.push(r.buffer as ArrayBuffer, sc.buffer as ArrayBuffer);
+      }
+      self.postMessage({ type: 'result', id: m.id, value: { record, cancelled: wasCancelled, elapsedMs: performance.now() - t0 } } satisfies WorkerResponse, transfer);
+      return;
+    }
+    case 'putRanks': {
+      await load(m.base, m.id);
+      py!.globals.set('_fp_data', m.data);
+      py!.globals.set('_fp_key', m.key);
+      py!.globals.set('_fp_shape', JSON.stringify(m.shape));
+      py!.runPython('fpengine.api.put_ranks(_fp_key, _fp_data.to_bytes(), json.loads(_fp_shape))');
+      py!.globals.delete('_fp_data');
+      post({ type: 'result', id: m.id, value: true });
       return;
     }
   }

@@ -1,0 +1,78 @@
+{
+  "dataset": "World Development Indicators (WDI), World Bank",
+  "catalog": "https://datacatalog.worldbank.org/search/dataset/0037712/World-Development-Indicators",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://datacatalog.worldbank.org/public-licenses?fragment=cc",
+  "attribution": "The World Bank, World Development Indicators. Underlying series credit their original compilers (UN WPP, ILO, ITU, UNESCO UIS, ICP, and others) in the WDI metadata.",
+  "wdiLastUpdated": "2026-10-08",
+  "retrievedOn": "2026-11-08",
+  "year": 2022,
+  "countries": [
+    "AUT",
+    "BEL",
+    "BGR",
+    "HRV",
+    "CYP",
+    "CZE",
+    "DNK",
+    "EST",
+    "FIN",
+    "FRA",
+    "DEU",
+    "GRC",
+    "HUN",
+    "IRL",
+    "ITA",
+    "LVA",
+    "LTU",
+    "LUX",
+    "MLT",
+    "NLD",
+    "POL",
+    "PRT",
+    "ROU",
+    "SVK",
+    "SVN",
+    "ESP",
+    "SWE"
+  ],
+  "indicators": {
+    "gdp_pc_ppp": {
+      "code": "NY.GDP.PCAP.PP.KD",
+      "name": "GDP per capita, PPP (constant 2021 international $)",
+      "suggestedDirection": "higher",
+      "url": "https://api.worldbank.org/v2/country/AUT;BEL;BGR;HRV;CYP;CZE;DNK;EST;FIN;FRA;DEU;GRC;HUN;IRL;ITA;LVA;LTU;LUX;MLT;NLD;POL;PRT;ROU;SVK;SVN;ESP;SWE/indicator/NY.GDP.PCAP.PP.KD?date=2022&format=json&per_page=200"
+    },
+    "life_expectancy": {
+      "code": "SP.DYN.LE00.IN",
+      "name": "Life expectancy at birth, total (years)",
+      "suggestedDirection": "higher",
+      "url": "https://api.worldbank.org/v2/country/AUT;BEL;BGR;HRV;CYP;CZE;DNK;EST;FIN;FRA;DEU;GRC;HUN;IRL;ITA;LVA;LTU;LUX;MLT;NLD;POL;PRT;ROU;SVK;SVN;ESP;SWE/indicator/SP.DYN.LE00.IN?date=2022&format=json&per_page=200"
+    },
+    "unemployment": {
+      "code": "SL.UEM.TOTL.ZS",
+      "name": "Unemployment, total (% of total labor force) (modeled ILO estimate)",
+      "suggestedDirection": "lower",
+      "url": "https://api.worldbank.org/v2/country/AUT;BEL;BGR;HRV;CYP;CZE;DNK;EST;FIN;FRA;DEU;GRC;HUN;IRL;ITA;LVA;LTU;LUX;MLT;NLD;POL;PRT;ROU;SVK;SVN;ESP;SWE/indicator/SL.UEM.TOTL.ZS?date=2022&format=json&per_page=200"
+    },
+    "co2_pc": {
+      "code": "EN.GHG.CO2.PC.CE.AR5",
+      "name": "Carbon dioxide (CO2) emissions excluding LULUCF per capita (t CO2e/capita)",
+      "suggestedDirection": "lower",
+      "url": "https://api.worldbank.org/v2/country/AUT;BEL;BGR;HRV;CYP;CZE;DNK;EST;FIN;FRA;DEU;GRC;HUN;IRL;ITA;LVA;LTU;LUX;MLT;NLD;POL;PRT;ROU;SVK;SVN;ESP;SWE/indicator/EN.GHG.CO2.PC.CE.AR5?date=2022&format=json&per_page=200"
+    },
+    "internet_users": {
+      "code": "IT.NET.USER.ZS",
+      "name": "Individuals using the Internet (% of population)",
+      "suggestedDirection": "higher",
+      "url": "https://api.worldbank.org/v2/country/AUT;BEL;BGR;HRV;CYP;CZE;DNK;EST;FIN;FRA;DEU;GRC;HUN;IRL;ITA;LVA;LTU;LUX;MLT;NLD;POL;PRT;ROU;SVK;SVN;ESP;SWE/indicator/IT.NET.USER.ZS?date=2022&format=json&per_page=200"
+    },
+    "tertiary_enrollment": {
+      "code": "SE.TER.ENRR",
+      "name": "School enrollment, tertiary (% gross)",
+      "suggestedDirection": "higher",
+      "url": "https://api.worldbank.org/v2/country/AUT;BEL;BGR;HRV;CYP;CZE;DNK;EST;FIN;FRA;DEU;GRC;HUN;IRL;ITA;LVA;LTU;LUX;MLT;NLD;POL;PRT;ROU;SVK;SVN;ESP;SWE/indicator/SE.TER.ENRR?date=2022&format=json&per_page=200"
+    }
+  },
+  "changes": "Values copied unchanged from the API; one row per country; empty cells are values the API did not report for that year."
+}

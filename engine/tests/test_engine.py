@@ -327,3 +327,26 @@ def test_dataset_hash_golden_value():
 
 def test_canonical_json():
     assert canonical_json({"b": 1.0, "a": [0.1, -0.0, 2.5]}) == '{"a":[0.1,0,2.5],"b":1}'
+
+
+def test_vectorized_summary_matches_numpy_quantile():
+    d = parse_example_csv(ranking_csv())
+    res = run(d, synthetic_plan())
+    R = api.unb64(res["arrays"]["ranks"], "<f4", tuple(res["arrays"]["shape"]))
+    valid = [i for i, s in enumerate(res["specs"]) if s["status"] == "valid"]
+    for e, summ in enumerate(res["summary"]["entities"]):
+        col = R[valid, e]
+        col = col[~np.isnan(col)]
+        if len(col) == 0:
+            continue
+        q = np.quantile(col, [0.05, 0.5, 0.95])
+        assert [summ["p05"], summ["median"], summ["p95"]] == pytest.approx(q.tolist(), abs=1e-9)
+        assert summ["topK"] == pytest.approx(float(np.mean(col <= 5)))
+
+
+def test_committed_examples_match_the_generator():
+    import os
+
+    root = os.path.join(os.path.dirname(__file__), "..", "..", "public", "examples")
+    assert open(os.path.join(root, "ranking-synthetic.csv"), encoding="utf-8").read() == ranking_csv()
+    assert open(os.path.join(root, "relationship-simpson.csv"), encoding="utf-8").read() == simpson_csv()
