@@ -42,7 +42,7 @@ export function ResultsView({ project, update, engine, ensureEngine, engineStatu
           <button key={e.id} role="tab" aria-selected={e.id === entry.id} className={`tab${e.id === entry.id ? ' active' : ''}`} onClick={() => update((pr) => ({ ...pr, activePlan: e.id }))}>{e.plan.title} <span className="muted small">{e.plan.workflow}</span></button>
         ))}
       </div>
-      <div className="run-bar" aria-live="polite">
+      <div className="run-bar sticky" aria-live="polite">
         {running ? (
           <>
             <div className="progress-wrap">

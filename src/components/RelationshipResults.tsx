@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Project, RelationshipPlan, RelationshipResult, RelationshipSpec } from '../lib/types';
 import type { Engine } from '../worker/client';
 import { niceTicks, useWidth } from './useWidth';
+import { SectionNav } from './RankingResults';
 
 interface Props {
   project: Project;
@@ -42,8 +43,10 @@ export function RelationshipResults({ project, plan, result, engine, ensureEngin
         {estimands.map((e) => <button key={e.estimand} role="tab" aria-selected={e.estimand === est} className={`tab${e.estimand === est ? ' active' : ''}`} onClick={() => setEst(e.estimand)}>{e.estimand === 'identity' ? 'outcome as measured' : 'log outcome'} <span className="muted small">{e.valid} valid</span></button>)}
       </div>
       {estimands.length > 1 && <p className="small notice">These are different estimands, shown separately and never pooled: a coefficient on log({plan.outcome}) is a proportional change, not a change in {plan.outcomeUnit || 'outcome units'}.</p>}
+      <SectionNav items={[['fp-glance', 'at a glance'], ['fp-curve', 'specification curve'], ['fp-selected', 'selected']]} />
+      {g && <RelationshipGlance specs={validSorted} plan={plan} estimandLabel={g.label} onSel={(i) => { setSel(i); document.getElementById('fp-selected')?.scrollIntoView({ block: 'start' }); }} />}
       {g && (
-        <section className="panel">
+        <section className="panel" id="fp-curve">
           <div className="row wrap between">
             <h3 className="h">Specification curve</h3>
             <div className="seg" role="group" aria-label="Display">
@@ -61,7 +64,7 @@ export function RelationshipResults({ project, plan, result, engine, ensureEngin
           )}
         </section>
       )}
-      <section className="panel" aria-live="polite">
+      <section className="panel" id="fp-selected" aria-live="polite">
         <h3 className="h">Selected specification {sel !== null ? `#${sel}` : ''}</h3>
         {!inspectable ? <p className="muted small">The dataset changed after this result, so its inputs cannot be shown faithfully.</p> : sel === null ? <p className="muted small">Select a point or row.</p> : !detail ? <p className="muted small">Recomputing with full detail…</p> : <Detail d={detail} plan={plan} />}
       </section>
@@ -161,5 +164,64 @@ function Detail({ d, plan }: { d: any; plan: RelationshipPlan }) {
         </table>
       </div>
     </div>
+  );
+}
+
+const orList = (xs: string[]) => xs.map((x, i) => <span key={x}>{i === 0 ? '' : i === xs.length - 1 ? ' or ' : ', '}<span className="mono">{x}</span></span>);
+
+const median = (xs: number[]) => { const v = [...xs].sort((a, b) => a - b); const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+
+/**
+ * Plain-language reading of the specification curve for one estimand. Each sentence is a
+ * count or a median over the valid specifications shown in the curve below.
+ */
+function RelationshipGlance({ specs, plan, estimandLabel, onSel }: { specs: RelationshipSpec[]; plan: RelationshipPlan; estimandLabel: string; onSel: (i: number) => void }) {
+  const n = specs.length;
+  if (!n) return null;
+  const pos = specs.filter((s) => s.estimate! > 0).length;
+  const neg = specs.filter((s) => s.estimate! < 0).length;
+  const withCi = specs.filter((s) => s.low !== null && s.low !== undefined);
+  const excl = withCi.filter((s) => s.low! > 0 || s.high! < 0).length;
+  const lo = specs[0], hi = specs[n - 1];
+  // Which decision lines up with the sign, or failing that moves the median most.
+  const dims = (['filter', 'covariates', 'outliers'] as const).map((dim) => {
+    const groups = new Map<string, RelationshipSpec[]>();
+    for (const s of specs) groups.set(String(s[dim]), [...(groups.get(String(s[dim])) ?? []), s]);
+    const opts = [...groups].map(([option, xs]) => ({ option, share: xs.filter((x) => x.estimate! > 0).length / xs.length, med: median(xs.map((x) => x.estimate!)) }));
+    return { dim, opts };
+  }).filter((d) => d.opts.length > 1);
+  const splitter = pos && neg ? dims.find((d) => d.opts.every((o) => o.share === 0 || o.share === 1)) : undefined;
+  const mover = [...dims].sort((a, b) => (Math.max(...b.opts.map((o) => o.med)) - Math.min(...b.opts.map((o) => o.med))) - (Math.max(...a.opts.map((o) => o.med)) - Math.min(...a.opts.map((o) => o.med))))[0];
+  const signMixed = pos > 0 && neg > 0;
+  return (
+    <section className="panel glance" id="fp-glance" aria-label="At a glance">
+      <h3 className="h">At a glance</h3>
+      <ul className="plain glance-list">
+        <li className={signMixed ? 'g-bad' : 'g-ok'}>
+          <span className="g-sym" aria-hidden="true">{signMixed ? '+-' : pos ? '+' : '-'}</span>
+          <span>{signMixed
+            ? <>The direction depends on the decisions: {pos} of {n} valid specifications estimate a positive effect and {neg} a negative one.</>
+            : <>All {n} valid specifications agree on the direction: the estimate is {pos ? 'positive' : neg ? 'negative' : 'zero'}.</>}
+          </span>
+        </li>
+        {splitter && (
+          <li className="g-warn">
+            <span className="g-sym" aria-hidden="true">{'<>'}</span>
+            <span>The sign follows the <strong>{splitter.dim}</strong> decision: every specification using {orList(splitter.opts.filter((o) => o.share === 1).map((o) => o.option))} is positive, and every one using {orList(splitter.opts.filter((o) => o.share === 0).map((o) => o.option))} is negative.</span>
+          </li>
+        )}
+        {!splitter && mover && (
+          <li className="g-warn">
+            <span className="g-sym" aria-hidden="true">{'<>'}</span>
+            <span>The <strong>{mover.dim}</strong> decision moves the median estimate most: {[...mover.opts].sort((a, b) => a.med - b.med).map((o, i) => <span key={o.option}>{i > 0 ? ', ' : ''}<span className="mono">{o.option}</span> {f(o.med)}</span>)}.</span>
+          </li>
+        )}
+        <li className="g-muted">
+          <span className="g-sym" aria-hidden="true">|</span>
+          <span>Estimates range from <button className="link" onClick={() => onSel(lo.index)}>{f(lo.estimate)}</button> to <button className="link" onClick={() => onSel(hi.index)}>{f(hi.estimate)}</button> {plan.outcomeUnit && lo.transform === 'identity' ? `${plan.outcomeUnit} per ${plan.predictorUnit || 'unit'}` : ''}. {withCi.length ? `${excl} of ${withCi.length} intervals exclude zero.` : 'No specification has a valid interval.'}</span>
+        </li>
+      </ul>
+      <p className="small muted">Estimand: {estimandLabel}. Exploratory: counts describe the tested specification space; they do not correct for multiple testing or establish causation.</p>
+    </section>
   );
 }
