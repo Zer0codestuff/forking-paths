@@ -37,6 +37,16 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [storageProblem, setStorageProblem] = useState<string | null>(null);
   const saveTimer = useRef<number | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+
+  // Sticky elements below the header need its live height (it wraps on narrow screens).
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--top-h', `${Math.ceil(el.getBoundingClientRect().height)}px`));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     engine.onLoading = (s) => setEngineStatus((e) => ({ ...e, state: s.stage === 'ready' ? 'ready' : 'loading', stage: s }));
@@ -147,7 +157,7 @@ export function App() {
 
   return (
     <div className="app">
-      <header className="top">
+      <header className="top" ref={headerRef}>
         <h1 className="brand">FORKING PATHS</h1>
         <nav className="views" aria-label="Workspace">
           {VIEWS.map((v) => (
@@ -160,7 +170,7 @@ export function App() {
         <div className="runtime small" role="status" aria-live="polite">
           {engineStatus.state === 'idle' && <span className="muted">Python engine loads when you run an analysis</span>}
           {engineStatus.state === 'loading' && <span>Loading engine: {engineStatus.stage?.stage ?? 'starting'} ({engineStatus.stage?.done ?? 0}/{engineStatus.stage?.total ?? 4})</span>}
-          {engineStatus.state === 'ready' && <span className="ok-text">engine ready{engineStatus.runtime ? ` · Python ${engineStatus.runtime.python} · NumPy ${engineStatus.runtime.numpy} · SciPy ${engineStatus.runtime.scipy}` : ''}</span>}
+          {engineStatus.state === 'ready' && <span className="ok-text">engine ready{engineStatus.runtime ? <span className="runtime-versions">{` · Python ${engineStatus.runtime.python} · NumPy ${engineStatus.runtime.numpy} · SciPy ${engineStatus.runtime.scipy}`}</span> : ''}</span>}
           {engineStatus.state === 'error' && <span className="bad-text">engine unavailable</span>}
         </div>
       </header>

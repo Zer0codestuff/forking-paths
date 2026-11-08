@@ -47,7 +47,7 @@ function OptionGroup({ title, all, chosen, onChange }: { title: string; all: Arr
         return (
           <div key={id} className="option-row">
             <label className="inline"><input type="checkbox" checked={!!cur} onChange={(e) => onChange(e.target.checked ? [...chosen, { id, rationale: '' }].sort((a, b) => all.findIndex((x) => x[0] === a.id) - all.findIndex((x) => x[0] === b.id)) : chosen.filter((o) => o.id !== id))} /> <span className="mono">{id}</span> <span className="muted small">{label}</span></label>
-            {cur && <input className="input rationale" aria-label={`rationale for ${id}`} placeholder="why this alternative is reasonable" value={cur.rationale} onChange={(e) => onChange(chosen.map((o) => (o.id === id ? { ...o, rationale: e.target.value } : o)))} />}
+            {cur && <textarea className="input rationale" rows={2} aria-label={`rationale for ${id}`} placeholder="why this alternative is reasonable" value={cur.rationale} onChange={(e) => onChange(chosen.map((o) => (o.id === id ? { ...o, rationale: e.target.value } : o)))} />}
           </div>
         );
       })}
@@ -78,7 +78,7 @@ export function PlanView({ project, update, onRun, running }: Props) {
       </div>
       {entry && count && (
         <>
-          <div className="run-bar">
+          <div className="run-bar sticky">
             <span><strong>{count.planned.toLocaleString()}</strong> planned specifications · limit <input className="input num-input" type="number" min={1} max={100000} aria-label="maximum specifications" value={entry.plan.maxSpecs} onChange={(e) => setPlan({ ...entry.plan, maxSpecs: Math.max(1, Number(e.target.value) || 1) })} />{count.uncomputed > 0 && <span className="warn-text"> · {count.uncomputed.toLocaleString()} will stay uncomputed (a seeded uniform random subset is computed, so no decision option is dropped wholesale)</span>}</span>
             <button className="btn primary" disabled={running || count.planned === 0} onClick={() => onRun(entry.id)}>{running ? 'running…' : `run ${count.willRun.toLocaleString()} specifications`}</button>
           </div>
