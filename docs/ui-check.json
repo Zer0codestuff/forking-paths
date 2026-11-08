@@ -1,0 +1,221 @@
+{
+  "generatedAt": "2026-11-08T15:12:40.006Z",
+  "browser": "Chromium headless (Playwright)",
+  "timings": {
+    "coldLoadAndRunMs": 10916,
+    "warmRunMs": 513
+  },
+  "results": [
+    {
+      "name": "data inspection shows the parse failure",
+      "ok": true,
+      "detail": "regionnumbertext (inferred)0none30Alder, Birch, Cedaraccess_indexnumber (inferred)text0none2935 to 7575.0, 42.0, 74.5cost_eurnumber (inferred)text0none29560 to 960560.0, 565.0, 880.0safety_pctnumber ("
+    },
+    {
+      "name": "data inspection shows the duplicate row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "planned count is shown before running",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "engine loading stages are shown while the runtime starts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ranking run reports valid and invalid separately",
+      "ok": true,
+      "detail": "valid 378invalid 126cancelled 0uncomputed 0"
+    },
+    {
+      "name": "selected run shows normalized values and contributions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "key 2 opens decisions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "rank distributions have an equivalent table",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "chart rows toggle by keyboard",
+      "ok": true,
+      "detail": "4 -> 5"
+    },
+    {
+      "name": "changing a decision marks results stale",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "restoring the decision makes the cached result current again",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "cancel stops the run and counts cancelled specifications",
+      "ok": true,
+      "detail": "valid 176invalid 0cancelled 19824uncomputed 28024"
+    },
+    {
+      "name": "the interface stayed responsive during the run",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "CLI reproduces the browser bundle in a clean directory",
+      "ok": true,
+      "detail": "s (tolerance 0.0)\n  [ok] Synthetic regions (ranking, known behavior): scores: max absolute score difference 2.22e-16 (tolerance 1e-09)\n  [ok] Synthetic regions (ranking, known behavior): rank summaries: max difference in top-k fraction or median rank 0\n  runtime differs from the exporting runtime: python 3.14.2 -> 3.12.12, numpy 2.4.6 -> 1.26.4, scipy 1.18.0 -> 1.13.1\nREPRODUCED within tolerance.\n"
+    },
+    {
+      "name": "browser reproduces the reimported bundle",
+      "ok": true,
+      "detail": "Reproduced within tolerance.[ok] bundle integrity: dataset hash and source bytes match their recorded values[ok] Synthetic regions (ranking, known behavior): cache key inputs: dataset c0d5ca610169, plan 147190e97262[ok] Synthetic regions (ranking, known behavior): specification statuses: 504 of 504 "
+    },
+    {
+      "name": "invalid bundle is rejected with a reason",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ragged CSV blocks acceptance",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "transformations are reported as separate estimands",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "exploratory caveat is shown",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "pooled estimates are positive and department-adjusted estimates negative",
+      "ok": true,
+      "detail": "[[\"none\",0.732],[\"none\",0.732],[\"none\",0.732],[\"none\",0.732],[\"department\",-0.651],[\"department\",-0.651]]"
+    },
+    {
+      "name": "CLI reproduces the relationship bundle",
+      "ok": true,
+      "detail": "and errors: cache key inputs: dataset 5ae2a8e2719d, plan 959f340505f8\n  [ok] Training and errors: specification statuses: 48 of 48 match\n  [ok] Training and errors: estimates and intervals: 192 values, max relative difference 8.83e-14 (tolerance 1e-08)\n  runtime differs from the exporting runtime: python 3.14.2 -> 3.12.12, numpy 2.4.6 -> 1.26.4, scipy 1.18.0 -> 1.13.1\nREPRODUCED within tolerance.\n"
+    },
+    {
+      "name": "time-ordered rows block every interval method before running",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "real case study shows license and source",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "specifications beyond the limit are reported as uncomputed",
+      "ok": true,
+      "detail": "valid 338invalid 174cancelled 0uncomputed 268"
+    },
+    {
+      "name": "the computed subset is described",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 1440px on Data",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 1440px on Decisions",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 1440px on Results",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 1440px on Export",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 1024px on Data",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 1024px on Decisions",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 1024px on Results",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 1024px on Export",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 768px on Data",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 768px on Decisions",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 768px on Results",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 768px on Export",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 390px on Data",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 390px on Decisions",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 390px on Results",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no page-wide horizontal scrolling at 390px on Export",
+      "ok": true,
+      "detail": "0px"
+    },
+    {
+      "name": "no console or page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "errors": []
+}
