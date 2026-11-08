@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-08T15:12:40.006Z",
+  "generatedAt": "2026-11-08T17:18:07.249Z",
   "browser": "Chromium headless (Playwright)",
   "timings": {
-    "coldLoadAndRunMs": 10916,
-    "warmRunMs": 513
+    "coldLoadAndRunMs": 10434,
+    "warmRunMs": 534
   },
   "results": [
     {
@@ -37,6 +37,21 @@
       "detail": ""
     },
     {
+      "name": "at a glance states the known leader from the summary",
+      "ok": true,
+      "detail": "At a glanceoAlder ranks first in all 378 valid specifications.~1 entity is in the top 5 in at least 95% of them (Alder). 15 more move in and out of the top 5 depending on the decisions.<>Most sensitive: Iris, between rank 6 and 28 (5th to 95th percentile). Steadiest: Alder, always rank 1.-10 entities never reach the top 5 in any valid specification.Shares describe the declared specification space, not the probability that a ranking is true. Select a name to see what moves it."
+    },
+    {
+      "name": "default focus is a sensitive entity, not the constant leader",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "names in the summary focus that entity",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "name": "key 2 opens decisions",
       "ok": true,
       "detail": ""
@@ -64,7 +79,7 @@
     {
       "name": "cancel stops the run and counts cancelled specifications",
       "ok": true,
-      "detail": "valid 176invalid 0cancelled 19824uncomputed 28024"
+      "detail": "valid 144invalid 0cancelled 19856uncomputed 28024"
     },
     {
       "name": "the interface stayed responsive during the run",
@@ -98,6 +113,11 @@
     },
     {
       "name": "exploratory caveat is shown",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "at a glance names the decision that flips the sign",
       "ok": true,
       "detail": ""
     },
