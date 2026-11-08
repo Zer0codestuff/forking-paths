@@ -127,8 +127,13 @@ def test_seeded_sampling_is_reproducible_and_reports_infeasible_draws():
 
 def test_spec_limit_marks_uncomputed():
     res = run(TINY, rplan(norm=("minmax", "zscore", "rank"), maxSpecs=2))
-    assert [s["status"] for s in res["specs"]] == ["valid", "valid", "uncomputed"]
+    st = [s["status"] for s in res["specs"]]
+    assert sorted(st) == ["uncomputed", "valid", "valid"]
+    assert "seeded random subset" in next(s["reason"] for s in res["specs"] if s["status"] == "uncomputed")
     assert res["summary"]["counts"]["uncomputed"] == 1
+    assert res["selection"]["method"].startswith("uniform random subset")
+    again = run(TINY, rplan(norm=("minmax", "zscore", "rank"), maxSpecs=2))
+    assert [s["status"] for s in again["specs"]] == st  # the subset is seeded
 
 
 def test_cancellation_marks_remaining_cancelled():

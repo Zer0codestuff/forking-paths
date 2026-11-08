@@ -5,7 +5,8 @@ import type { DatasetColumn } from './csv';
 const enc = new TextEncoder();
 
 export async function sha256Hex(data: Uint8Array | ArrayBuffer): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', data instanceof Uint8Array ? data : new Uint8Array(data));
+  const view = data instanceof Uint8Array ? data : new Uint8Array(data);
+  const buf = await crypto.subtle.digest('SHA-256', view as Uint8Array<ArrayBuffer>);
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 

@@ -42,12 +42,26 @@ def _clean(v: Any) -> Any:
     return v
 
 
+def _load(x: Any) -> Any:
+    """Accept JSON text (CLI) or already-decoded objects (browser worker passes plain values)."""
+    return json.loads(x) if isinstance(x, (str, bytes)) else x
+
+
+def _selection(n: int, limit: int, seed: int) -> list[int]:
+    """Specifications to compute when the limit is below the planned count: a uniform random
+    subset drawn with a recorded seed, so truncation does not drop whole decision options."""
+    if limit >= n:
+        return list(range(n))
+    rng = np.random.Generator(np.random.PCG64(seed))
+    return sorted(int(i) for i in rng.choice(n, size=limit, replace=False))
+
+
 def info() -> str:
     return _json({"runtime": runtime_info(), "schemas": SCHEMAS, "algorithms": {"ranking": ranking.ALGORITHM_VERSION, "relationship": relationship.ALGORITHM_VERSION}, "methods": {"normalization": ranking.NORMALIZATIONS, "missing": ranking.MISSING_RULES, "aggregation": ranking.AGGREGATIONS, "ties": ranking.TIE_RULES}})
 
 
 def hash_dataset(dataset_json: str) -> str:
-    return dataset_hash(json.loads(dataset_json)["columns"])
+    return dataset_hash(_load(dataset_json)["columns"])
 
 
 def plan_hash(plan: dict) -> str:
@@ -55,7 +69,7 @@ def plan_hash(plan: dict) -> str:
 
 
 def plan_info(dataset_json: str, plan_json: str) -> str:
-    plan = json.loads(plan_json)
+    plan = _load(plan_json)
     try:
         if plan["workflow"] == "ranking":
             c = ranking.planned_count(plan)
@@ -71,8 +85,8 @@ def plan_info(dataset_json: str, plan_json: str) -> str:
 
 def start(dataset_json: str, plan_json: str) -> str:
     """Validate inputs and enumerate specifications. Returns a session id and the cache key."""
-    dataset = json.loads(dataset_json)
-    plan = json.loads(plan_json)
+    dataset = _load(dataset_json)
+    plan = _load(plan_json)
     dh = dataset_hash(dataset["columns"])
     if dataset.get("hash") and dataset["hash"] != dh:
         raise ValueError(f"Dataset hash mismatch: recorded {dataset['hash'][:12]}, computed {dh[:12]}")
@@ -89,17 +103,18 @@ def start(dataset_json: str, plan_json: str) -> str:
         sess = {"workflow": "relationship", "plan": plan, "dataset": dataset, "specs": specs, "results": [None] * len(specs)}
     else:
         raise ValueError(f"Unknown workflow {plan.get('workflow')!r}")
-    limit = int(plan.get("maxSpecs", len(specs)))
-    sess.update({"key": key, "datasetHash": dh, "limit": min(limit, len(specs)), "runtime": rt, "next": 0})
+    limit = min(int(plan.get("maxSpecs", len(specs))), len(specs))
+    order = _selection(len(specs), limit, int(plan.get("limitSeed", 0)))
+    sess.update({"key": key, "datasetHash": dh, "limit": limit, "order": order, "selected": set(order), "runtime": rt, "next": 0})
     _SESSIONS[key] = sess
-    return _json({"key": key, "datasetHash": dh, "planHash": plan_hash(plan), "planned": len(specs), "limit": sess["limit"], "runtime": rt})
+    return _json({"key": key, "datasetHash": dh, "planHash": plan_hash(plan), "planned": len(specs), "limit": sess["limit"], "subset": limit < len(specs), "runtime": rt})
 
 
 def run_batch(key: str, count: int) -> str:
     """Compute up to `count` further specifications. Returns progress."""
     s = _SESSIONS[key]
     end = min(s["limit"], s["next"] + int(count))
-    for i in range(s["next"], end):
+    for i in s["order"][s["next"]:end]:
         if s["workflow"] == "ranking":
             spec = s["specs"][i]
             if spec.status == "invalid":
@@ -124,13 +139,16 @@ def finish(key: str, cancelled: bool = False, created_at: str | None = None) -> 
     the user stopped the run, and specs beyond the limit are 'uncomputed'."""
     s = _SESSIONS.pop(key)
     created = created_at or datetime.now(timezone.utc).isoformat()
-    base = {"schema": SCHEMAS["result"], "workflow": s["workflow"], "key": key, "datasetHash": s["datasetHash"], "planHash": plan_hash(s["plan"]), "runtime": s["runtime"], "createdAt": created, "engine": ENGINE_VERSION}
+    selection = {"planned": len(s["specs"]), "computed": s["limit"], "method": "all" if s["limit"] >= len(s["specs"]) else f"uniform random subset without replacement, NumPy PCG64 seed {int(s['plan'].get('limitSeed', 0))}"}
+    base = {"selection": selection, "schema": SCHEMAS["result"], "workflow": s["workflow"], "key": key, "datasetHash": s["datasetHash"], "planHash": plan_hash(s["plan"]), "runtime": s["runtime"], "createdAt": created, "engine": ENGINE_VERSION}
     if s["workflow"] == "ranking":
         specs = s["specs"]
         for i, spec in enumerate(specs):
-            if spec.status == "pending":
-                spec.status = "cancelled" if (cancelled and i < s["limit"]) else "uncomputed"
-                spec.reason = "Run cancelled before this specification" if spec.status == "cancelled" else f"Beyond the limit of {s['limit']} specifications"
+            if spec.status == "pending" or (spec.status == "invalid" and i not in s["selected"]):
+                if i in s["selected"]:
+                    spec.status, spec.reason = "cancelled", "Run cancelled before this specification"
+                else:
+                    spec.status, spec.reason = "uncomputed", f"Not in the seeded random subset of {s['limit']} of {len(specs)} specifications"
         top_k = int(s["plan"].get("topK", 10))
         rec = {
             **base,
@@ -147,7 +165,7 @@ def finish(key: str, cancelled: bool = False, created_at: str | None = None) -> 
         results = []
         for i, r in enumerate(s["results"]):
             if r is None:
-                r = {"status": "cancelled" if (cancelled and i < s["limit"]) else "uncomputed"}
+                r = {"status": "cancelled", "reason": "Run cancelled before this specification"} if i in s["selected"] else {"status": "uncomputed", "reason": f"Not in the seeded random subset of {s['limit']} of {len(specs)} specifications"}
             results.append(r)
         counts = {k: sum(1 for r in results if r["status"] == k) for k in ("valid", "invalid", "cancelled", "uncomputed")}
         rec = {
@@ -170,7 +188,7 @@ def run_all(dataset_json: str, plan_json: str, batch: int = 64) -> str:
 
 def inspect(dataset_json: str, plan_json: str, spec_index: int) -> str:
     """Recompute one specification with full detail (inputs, exclusions, normalized values, contributions)."""
-    dataset, plan = json.loads(dataset_json), json.loads(plan_json)
+    dataset, plan = _load(dataset_json), _load(plan_json)
     if plan["workflow"] == "ranking":
         specs = ranking.enumerate_specs(plan)
         spec = specs[spec_index]
@@ -202,7 +220,7 @@ def query_pairwise(ranks_b64: str, shape: list[int], valid: list[bool], idx: lis
 
 
 def query_influence(dataset_json: str, plan_json: str, ranks_b64: str, shape: list[int], statuses: list[str], entity: int) -> str:
-    dataset, plan = json.loads(dataset_json), json.loads(plan_json)
+    dataset, plan = _load(dataset_json), _load(plan_json)
     prep = ranking.prepare(dataset, plan)
     specs = ranking.enumerate_specs(plan)
     for s, st in zip(specs, statuses):
@@ -213,3 +231,10 @@ def query_influence(dataset_json: str, plan_json: str, ranks_b64: str, shape: li
 
 def canonical(value_json: str) -> str:
     return canonical_json(json.loads(value_json))
+
+
+def compare(stored_json: str, fresh_json: str) -> str:
+    from .reproduce import TOLERANCE, compare_results
+
+    checks = compare_results(_load(stored_json), _load(fresh_json))
+    return _json({"ok": all(c["ok"] for c in checks), "checks": checks, "tolerance": TOLERANCE})
