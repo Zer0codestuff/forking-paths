@@ -1,0 +1,9 @@
+node_modules/
+dist/
+public/pyodide/
+bench/out/
+scratch/
+*.log
+.DS_Store
+__pycache__/
+.pytest_cache/
