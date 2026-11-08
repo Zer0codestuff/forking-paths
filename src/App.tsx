@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DataView } from './components/DataView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ExportView } from './components/ExportView';
 import { PlanView } from './components/PlanView';
 import { ResultsView } from './components/ResultsView';
@@ -114,11 +115,11 @@ export function App() {
     if (!(await ensureEngine())) return;
     const { id, promise } = engine.run(project.dataset, entry.plan, (progress) => setRunning((r) => (r ? { ...r, progress } : r)), entry.plan.workflow === 'ranking' ? 16 : 4);
     setRunning({ reqId: id, planId, progress: null });
+    setView('results');
     try {
       const out = await promise;
       const rec: RunRecord = { id: newId('run'), planId, fingerprint: fp, plan: entry.plan, datasetHash: project.dataset.hash, elapsedMs: out.elapsedMs, cancelled: out.cancelled, result: out.record };
       update((p) => ({ ...p, runs: [...p.runs.filter((r) => !(r.planId === planId && r.fingerprint === fp)), rec] }));
-      setView('results');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -173,6 +174,7 @@ export function App() {
       {engineStatus.state === 'error' && <div className="notice bad" role="alert">The Python engine could not load: {engineStatus.error} <button className="btn ghost" onClick={() => setEngineStatus({ state: 'idle' })}>retry</button></div>}
       {storageProblem && <div className="notice warn" role="alert">{storageProblem}</div>}
       <main className="main">
+        <ErrorBoundary resetKey={view}>
         {!project && <p className="empty">Loading the example project…</p>}
         {project && view === 'data' && <DataView project={project} setProject={setProject} update={update} openExample={openExample} onContinue={() => setView('plan')} />}
         {project && view === 'plan' && <PlanView project={project} update={update} onRun={(id) => void runPlan(id)} running={!!running} />}
@@ -180,6 +182,7 @@ export function App() {
           <ResultsView project={project} update={update} engine={engine} ensureEngine={ensureEngine} engineStatus={engineStatus} running={running} onRun={(id) => void runPlan(id)} onCancel={cancelRun} />
         )}
         {project && view === 'export' && <ExportView project={project} setProject={setProject} engine={engine} ensureEngine={ensureEngine} />}
+        </ErrorBoundary>
       </main>
     </div>
   );

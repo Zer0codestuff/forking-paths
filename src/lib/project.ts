@@ -9,8 +9,17 @@ export function stableStringify(v: unknown): string {
   return `{${Object.keys(o).filter((k) => o[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`).join(',')}}`;
 }
 
+const DESCRIPTIVE = new Set(['rationale', 'title']);
+/** The plan without descriptive fields; mirrors fpengine.canonical.computational. */
+export function computational(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(computational);
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).filter(([k]) => !DESCRIPTIVE.has(k)).map(([k, x]) => [k, computational(x)]));
+  return v;
+}
+
+/** Results are current only while the dataset and every computational plan field are unchanged. */
 export function fingerprint(plan: Plan, dsHash: string): string {
-  return `${dsHash}:${stableStringify(plan)}`;
+  return `${dsHash}:${stableStringify(computational(plan))}`;
 }
 
 export function newId(prefix: string): string {

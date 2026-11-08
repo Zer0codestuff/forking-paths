@@ -17,7 +17,7 @@ from typing import Any
 
 import numpy as np
 
-from .canonical import array_digest, hash_json
+from .canonical import computational, array_digest, hash_json
 
 ALGORITHM_VERSION = "ranking/1"
 
@@ -309,7 +309,7 @@ def compute_spec(prep: Prepared, spec: Spec, plan: dict, detail: bool = False) -
 
 def plan_key(dataset_hash: str, plan: dict, runtime: dict) -> str:
     """Cache key: input content, plan, algorithm version, seed (inside the plan) and runtime."""
-    return hash_json({"dataset": dataset_hash, "plan": plan, "algorithm": ALGORITHM_VERSION, "runtime": {k: runtime[k] for k in ("engine", "numpy", "scipy")}})
+    return hash_json({"dataset": dataset_hash, "plan": computational(plan), "algorithm": ALGORITHM_VERSION, "runtime": {k: runtime[k] for k in ("engine", "numpy", "scipy")}})
 
 
 def summarize(prep: Prepared, specs: list[Spec], ranks: np.ndarray, top_k: int) -> dict:

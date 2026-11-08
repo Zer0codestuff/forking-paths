@@ -113,3 +113,16 @@ def array_digest(arr: np.ndarray, decimals: int | None = None) -> str:
     else:
         a = a.astype("<i8")
     return hashlib.sha256(a.tobytes()).hexdigest()
+
+
+DESCRIPTIVE_KEYS = {"rationale", "title"}
+
+
+def computational(value: Any) -> Any:
+    """The plan without purely descriptive fields (rationales, titles). Cache keys and staleness
+    depend on this, so editing an explanation never invalidates a result."""
+    if isinstance(value, dict):
+        return {k: computational(v) for k, v in value.items() if k not in DESCRIPTIVE_KEYS}
+    if isinstance(value, list):
+        return [computational(v) for v in value]
+    return value

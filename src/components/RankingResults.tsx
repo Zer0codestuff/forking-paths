@@ -25,7 +25,8 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
   const [focus, setFocus] = useState<number>(() => byMedian[0]?.idx ?? 0);
   const [mode, setMode] = useState<'chart' | 'table'>('chart');
   const [specIdx, setSpecIdx] = useState<number | null>(() => result.specs.find((s) => s.status === 'valid')?.index ?? null);
-  const [pair, setPair] = useState<Array<Array<number | null>> | null>(null);
+  const [pairState, setPair] = useState<{ idx: number[]; m: Array<Array<number | null>> } | null>(null);
+  const pair = pairState && pairState.idx.join(',') === selected.join(',') ? pairState.m : null;
   const [infl, setInfl] = useState<any>(null);
   const [detail, setDetail] = useState<any>(null);
   const [qErr, setQErr] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
   useEffect(() => {
     let live = true;
     if (selected.length < 2) { setPair(null); return; }
-    void ensureEngine().then((ok) => ok && engine.call('query_pairwise', result.arrays.ranks, result.arrays.shape, valid, selected)).then((m) => { if (live && m) setPair(m as any); }, (e) => live && setQErr(String(e.message ?? e)));
+    void ensureEngine().then((ok) => ok && engine.call('query_pairwise', result.arrays.ranks, result.arrays.shape, valid, selected)).then((m) => { if (live && m) setPair({ idx: selected, m: m as any }); }, (e) => live && setQErr(String(e.message ?? e)));
     return () => { live = false; };
   }, [selected, result, valid, engine, ensureEngine]);
 

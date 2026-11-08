@@ -23,7 +23,7 @@ from typing import Any
 
 import numpy as np
 
-from .canonical import hash_json
+from .canonical import computational, hash_json
 
 ALGORITHM_VERSION = "relationship/1"
 OPS = {"==", "!=", ">", ">=", "<", "<=", "in", "not-in"}
@@ -331,4 +331,4 @@ def summarize(plan: dict, specs: list[dict], results: list[dict]) -> dict:
 
 
 def plan_key(dataset_hash: str, plan: dict, runtime: dict) -> str:
-    return hash_json({"dataset": dataset_hash, "plan": plan, "algorithm": ALGORITHM_VERSION, "runtime": {k: runtime[k] for k in ("engine", "numpy", "scipy")}})
+    return hash_json({"dataset": dataset_hash, "plan": computational(plan), "algorithm": ALGORITHM_VERSION, "runtime": {k: runtime[k] for k in ("engine", "numpy", "scipy")}})
