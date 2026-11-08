@@ -64,6 +64,12 @@ try {
   await page.screenshot({ path: `${OUT}/desktop-1440-ranking.png` });
   const detail = await page.textContent('.spec-detail');
   expect('selected run shows normalized values and contributions', /raw value → normalized value → contribution/.test(detail) && /Alder/.test(detail));
+  const glance = await page.textContent('.glance');
+  expect('at a glance states the known leader from the summary', /Alder ranks first in all 378 valid specifications/.test(glance), glance);
+  expect('default focus is a sensitive entity, not the constant leader', !/What moves Alder/.test(await page.textContent('#fp-moves h3')));
+  await page.click('.glance .link:has-text("Iris")');
+  await page.waitForFunction(() => /What moves Iris/.test(document.querySelector('#fp-moves h3')?.textContent ?? ''));
+  expect('names in the summary focus that entity', true);
   t0 = Date.now();
   await runAndWait(page);
   timings.warmRunMs = Date.now() - t0;
@@ -152,6 +158,7 @@ try {
   const rr = await p2.textContent('.relationship-results');
   expect('transformations are reported as separate estimands', /different estimands, shown separately and never pooled/.test(rr));
   expect('exploratory caveat is shown', /not a posterior probability/.test(rr));
+  expect('at a glance names the decision that flips the sign', /The sign follows the covariates decision/.test(await p2.textContent('.glance')));
   await p2.screenshot({ path: `${OUT}/desktop-1440-relationship.png` });
   await p2.click('.seg .btn:has-text("table")');
   const signs = await p2.$$eval('.relationship-results .table-wrap.tall tbody tr', (rows) => rows.map((r) => [r.children[2].textContent, Number(r.children[7].textContent)]));
