@@ -73,7 +73,7 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
   return (
     <div className="ranking-results">
       {qErr && <p className="notice bad small" role="alert">{qErr}</p>}
-      <SectionNav items={[['fp-glance', 'at a glance'], ['fp-dist', 'distributions'], ['fp-pairs', 'pairwise'], ['fp-moves', 'what moves it'], ['fp-specs', 'specifications'], ['fp-selected', 'selected']]} />
+      <SectionNav items={RANK_SECTIONS} />
       <RankingGlance rows={byMedian} validCount={validCount} topK={result.summary.topK} onFocus={(i) => { setFocus(i); setSelected((s) => (s.includes(i) ? s : s.length >= 8 ? [...s.slice(1), i] : [...s, i])); document.getElementById('fp-moves')?.scrollIntoView({ block: 'start' }); }} />
       <section className="panel" id="fp-dist">
         <div className="row wrap between">
@@ -309,6 +309,8 @@ function SpecDetail({ d }: { d: any }) {
 
 type Row = EntitySummary & { idx: number };
 
+const RANK_SECTIONS: Array<[string, string]> = [['fp-glance', 'at a glance'], ['fp-dist', 'distributions'], ['fp-pairs', 'pairwise'], ['fp-moves', 'what moves it'], ['fp-specs', 'specifications'], ['fp-selected', 'selected']];
+
 const spread = (e: EntitySummary) => (e.evaluated > 0 && e.p05 !== undefined && e.p95 !== undefined ? e.p95 - e.p05 : -1);
 
 /** The entity whose rank moves most between the 5th and 95th percentile (ties: better median first). */
@@ -317,9 +319,26 @@ export function mostSensitive(rows: Row[]): Row | undefined {
 }
 
 export function SectionNav({ items }: { items: Array<[string, string]> }) {
+  const [active, setActive] = useState(items[0]?.[0]);
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const seen = new Map<string, boolean>();
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) seen.set(e.target.id, e.isIntersecting);
+      const first = items.find(([id]) => seen.get(id));
+      if (first) setActive(first[0]);
+    }, { rootMargin: '-120px 0px -55% 0px' });
+    for (const [id] of items) { const el = document.getElementById(id); if (el) io.observe(el); }
+    return () => io.disconnect();
+  }, [items]);
   return (
-    <nav className="section-nav small" aria-label="Sections of this result">
-      {items.map(([id, label]) => <a key={id} href={`#${id}`} onClick={(e) => { e.preventDefault(); document.getElementById(id)?.scrollIntoView({ block: 'start' }); }}>{label}</a>)}
+    <nav className="section-nav" aria-label="Sections of this result">
+      <p className="section-nav-title">on this result</p>
+      {items.map(([id, label], i) => (
+        <a key={id} href={`#${id}`} className={active === id ? 'active' : ''} aria-current={active === id ? 'location' : undefined} onClick={(e) => { e.preventDefault(); setActive(id); document.getElementById(id)?.scrollIntoView({ block: 'start' }); }}>
+          <span className="sn-dot" aria-hidden="true" /><span className="sn-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>{label}
+        </a>
+      ))}
     </nav>
   );
 }

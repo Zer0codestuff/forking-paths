@@ -14,6 +14,7 @@ interface Props {
 }
 
 const f = (v: number | null | undefined, d = 3) => (v === null || v === undefined || !Number.isFinite(v) ? 'n/a' : Math.abs(v) >= 1e4 || (Math.abs(v) < 1e-3 && v !== 0) ? v.toExponential(2) : v.toFixed(d));
+const REL_SECTIONS: Array<[string, string]> = [['fp-glance', 'at a glance'], ['fp-curve', 'specification curve'], ['fp-selected', 'selected']];
 const DIMS: Array<keyof RelationshipSpec> = ['filter', 'covariates', 'outliers', 'interval'];
 
 export function RelationshipResults({ project, plan, result, engine, ensureEngine, inspectable }: Props) {
@@ -43,7 +44,7 @@ export function RelationshipResults({ project, plan, result, engine, ensureEngin
         {estimands.map((e) => <button key={e.estimand} role="tab" aria-selected={e.estimand === est} className={`tab${e.estimand === est ? ' active' : ''}`} onClick={() => setEst(e.estimand)}>{e.estimand === 'identity' ? 'outcome as measured' : 'log outcome'} <span className="muted small">{e.valid} valid</span></button>)}
       </div>
       {estimands.length > 1 && <p className="small notice">These are different estimands, shown separately and never pooled: a coefficient on log({plan.outcome}) is a proportional change, not a change in {plan.outcomeUnit || 'outcome units'}.</p>}
-      <SectionNav items={[['fp-glance', 'at a glance'], ['fp-curve', 'specification curve'], ['fp-selected', 'selected']]} />
+      <SectionNav items={REL_SECTIONS} />
       {g && <RelationshipGlance specs={validSorted} plan={plan} estimandLabel={g.label} onSel={(i) => { setSel(i); document.getElementById('fp-selected')?.scrollIntoView({ block: 'start' }); }} />}
       {g && (
         <section className="panel" id="fp-curve">

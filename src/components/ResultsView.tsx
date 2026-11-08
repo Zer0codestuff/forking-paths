@@ -84,10 +84,10 @@ export function ResultsView({ project, update, engine, ensureEngine, engineStatu
           </div>
           {counts && (
             <ul className="counts plain" aria-label="Specification outcomes">
-              <li className="ok">valid <strong>{counts.valid}</strong></li>
-              <li className={counts.invalid ? 'bad' : ''}>invalid <strong>{counts.invalid}</strong></li>
-              <li className={counts.cancelled ? 'warn' : ''}>cancelled <strong>{counts.cancelled}</strong></li>
-              <li className={counts.uncomputed ? 'warn' : ''}>uncomputed <strong>{counts.uncomputed}</strong></li>
+              <li className="kpi ok"><span className="kpi-label">valid</span> <strong className="kpi-value">{counts.valid}</strong><span className="kpi-note">specifications with a result</span></li>
+              <li className={`kpi${counts.invalid ? ' bad' : ''}`}><span className="kpi-label">invalid</span> <strong className="kpi-value">{counts.invalid}</strong><span className="kpi-note">rejected by an explicit rule</span></li>
+              <li className={`kpi${counts.cancelled ? ' warn' : ''}`}><span className="kpi-label">cancelled</span> <strong className="kpi-value">{counts.cancelled}</strong><span className="kpi-note">stopped by you</span></li>
+              <li className={`kpi${counts.uncomputed ? ' warn' : ''}`}><span className="kpi-label">uncomputed</span> <strong className="kpi-value">{counts.uncomputed}</strong><span className="kpi-note">beyond the limit</span></li>
             </ul>
           )}
           {reasons.length > 0 && (
