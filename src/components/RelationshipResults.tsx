@@ -83,7 +83,7 @@ function Curve({ specs, plan, sel, onSel }: { specs: RelationshipSpec[]; plan: R
   const opts = DIMS.map((d) => ({ dim: d, values: [...new Set(specs.map((s) => String(s[d])))] })).filter((o) => o.values.length > 1 || o.dim === 'covariates');
   const rowH = 16;
   const matTop = top + plotH + 26;
-  const H = matTop + opts.reduce((a, o) => a + o.values.length * rowH + 8, 0) + 4;
+  const H = matTop + opts.reduce((a, o) => a + o.values.length * rowH + 22, 0) + 4;
   const ticks = niceTicks(lo, hi);
   let yy = matTop;
   return (
@@ -100,11 +100,11 @@ function Curve({ specs, plan, sel, onSel }: { specs: RelationshipSpec[]; plan: R
           </g>
         ))}
         {opts.map((o) => {
-          const start = yy;
-          yy += o.values.length * rowH + 8;
+          const start = yy + 14;
+          yy += o.values.length * rowH + 22;
           return (
             <g key={o.dim}>
-              <text x={l - 6} y={start - 2} className="axis" textAnchor="end">{o.dim}</text>
+              <text x={8} y={start - 2} className="axis group-label">{o.dim}</text>
               {o.values.map((v, k) => (
                 <g key={v}>
                   <text x={l - 6} y={start + k * rowH + 12} className="axis mono-fill" textAnchor="end">{v}</text>

@@ -190,3 +190,4 @@ progress::-moz-progress-bar { background: var(--ok); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+.chart .group-label { fill: var(--fg-2); font-family: var(--display); font-size: 10.5px; }

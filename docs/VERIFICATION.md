@@ -28,12 +28,12 @@ Expected values are derived independently of the engine:
 
 CSV tokenizing (quotes, delimiters, CRLF), profiling (types, missing values, parse failures, duplicates), decimal-comma parsing, strict number parsing, spreadsheet formula protection, and the dataset hash golden value.
 
-## 4. Browser checks (`npm run build && npm run ui-check`, 41 of 41)
+## 4. Browser checks (`npm run build && npm run ui-check`, 42 of 42)
 
 `scripts/ui-check.mjs` drives the built app in headless Chromium with reduced motion requested. Results are written to `docs/ui-check.json`. It checks:
 
 - Data inspection shows the deliberate parse failure and duplicate row; a ragged CSV blocks acceptance; an invalid bundle is rejected with its reason.
-- Cold engine load with visible loading stages, then a ranking run with valid and invalid specifications counted separately; the selected-run inspector shows raw values, normalized values and contributions.
+- Cold engine load with visible loading stages in the Results view, then a ranking run with valid and invalid specifications counted separately; the selected-run inspector shows raw values, normalized values and contributions.
 - Keyboard: number keys switch views, chart rows toggle with Enter, the rank chart has an equivalent table.
 - Changing a decision marks the result stale; restoring it makes the cached result current again (rationale edits never invalidate results).
 - Cancelling a 20,000-specification run stops between batches and reports cancelled specifications while the interface stays responsive.

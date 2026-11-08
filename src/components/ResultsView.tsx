@@ -55,11 +55,11 @@ export function ResultsView({ project, update, engine, ensureEngine, engineStatu
                 </>
               ) : <span>Preparing specifications…</span>}
             </div>
-            <button className="btn" onClick={onCancel}>cancel</button>
+            <button className="btn" onClick={onCancel} disabled={running.reqId < 0}>cancel</button>
           </>
         ) : (
           <>
-            <span className="small">{count.willRun.toLocaleString()} specifications planned{count.uncomputed ? `, ${count.uncomputed.toLocaleString()} beyond the limit` : ''}</span>
+            <span className="small">{count.planned.toLocaleString()} specifications planned{count.uncomputed ? `; a seeded subset of ${count.willRun.toLocaleString()} will be computed and ${count.uncomputed.toLocaleString()} left uncomputed` : ''}</span>
             <button className="btn primary" onClick={() => onRun(entry.id)}>{run && current ? 'run again' : 'run'}</button>
           </>
         )}

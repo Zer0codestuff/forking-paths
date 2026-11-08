@@ -112,10 +112,11 @@ export function App() {
     if (!entry) return;
     setError(null);
     const fp = fingerprint(entry.plan, project.dataset.hash);
-    if (!(await ensureEngine())) return;
+    setRunning({ reqId: -1, planId, progress: null });
+    setView('results');
+    if (!(await ensureEngine())) { setRunning(null); return; }
     const { id, promise } = engine.run(project.dataset, entry.plan, (progress) => setRunning((r) => (r ? { ...r, progress } : r)), entry.plan.workflow === 'ranking' ? 16 : 4);
     setRunning({ reqId: id, planId, progress: null });
-    setView('results');
     try {
       const out = await promise;
       const rec: RunRecord = { id: newId('run'), planId, fingerprint: fp, plan: entry.plan, datasetHash: project.dataset.hash, elapsedMs: out.elapsedMs, cancelled: out.cancelled, result: out.record };
@@ -127,7 +128,7 @@ export function App() {
     }
   }, [project, ensureEngine, engine, update]);
 
-  const cancelRun = () => { if (running) engine.cancel(running.reqId); };
+  const cancelRun = () => { if (running && running.reqId >= 0) engine.cancel(running.reqId); };
 
   // Keyboard: 1-4 switch views (outside form fields).
   useEffect(() => {

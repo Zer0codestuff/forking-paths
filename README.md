@@ -110,7 +110,7 @@ Tolerance: specification statuses and ranks must match exactly; scores within 1e
 | `npm run test:py` | 25 passed |
 | `npm test` | 6 passed (including the cross-language dataset hash) |
 | `npm run typecheck` | clean |
-| `npm run build && npm run ui-check` | 41 of 41 browser checks (see `docs/ui-check.json` and [docs/VERIFICATION.md](docs/VERIFICATION.md)) |
+| `npm run build && npm run ui-check` | 42 of 42 browser checks (see `docs/ui-check.json` and [docs/VERIFICATION.md](docs/VERIFICATION.md)) |
 | Browser vs CPython | identical rank, score and status digests (504 specifications of the synthetic example, Pyodide NumPy 2.4.6 vs CPython NumPy 1.26.4) |
 | Benchmark | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
 

@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-08T15:04:40.580Z",
+  "generatedAt": "2026-11-08T15:12:40.006Z",
   "browser": "Chromium headless (Playwright)",
   "timings": {
-    "coldLoadAndRunMs": 11382,
-    "warmRunMs": 545
+    "coldLoadAndRunMs": 10916,
+    "warmRunMs": 513
   },
   "results": [
     {
@@ -18,6 +18,11 @@
     },
     {
       "name": "planned count is shown before running",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "engine loading stages are shown while the runtime starts",
       "ok": true,
       "detail": ""
     },
@@ -59,7 +64,7 @@
     {
       "name": "cancel stops the run and counts cancelled specifications",
       "ok": true,
-      "detail": "valid 144invalid 0cancelled 19856uncomputed 28024"
+      "detail": "valid 176invalid 0cancelled 19824uncomputed 28024"
     },
     {
       "name": "the interface stayed responsive during the run",

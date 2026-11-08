@@ -52,7 +52,8 @@ try {
   expect('planned count is shown before running', /504/.test(await page.textContent('.run-bar')));
   let t0 = Date.now();
   await page.click('.run-bar .btn.primary');
-  await page.waitForSelector('text=Loading the Python engine', { timeout: 10000 }).catch(() => {});
+  await page.waitForSelector('.run-bar >> text=Loading the Python engine', { timeout: 10000 });
+  expect('engine loading stages are shown while the runtime starts', true);
   await page.screenshot({ path: `${OUT}/state-loading.png` });
   await page.waitForSelector('.counts', { timeout: 120000 });
   timings.coldLoadAndRunMs = Date.now() - t0;
