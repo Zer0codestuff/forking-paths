@@ -19,6 +19,13 @@ const VIEWS: Array<{ id: View; label: string; key: string }> = [
   { id: 'export', label: 'Export', key: '4' },
 ];
 
+const VIEW_INTRO: Record<View, string> = {
+  data: 'open, inspect and accept a table',
+  plan: 'declare every reasonable alternative',
+  results: 'how much the answer depends on the decisions',
+  export: 'bundle, report and reproduction',
+};
+
 export interface EngineStatus {
   state: 'idle' | 'loading' | 'ready' | 'error';
   stage?: LoadState;
@@ -37,6 +44,16 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [storageProblem, setStorageProblem] = useState<string | null>(null);
   const saveTimer = useRef<number | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+
+  // Sticky elements below the header need its live height (it wraps on narrow screens).
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => document.documentElement.style.setProperty('--top-h', `${Math.ceil(el.getBoundingClientRect().height)}px`));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     engine.onLoading = (s) => setEngineStatus((e) => ({ ...e, state: s.stage === 'ready' ? 'ready' : 'loading', stage: s }));
@@ -145,46 +162,74 @@ export function App() {
   const latestRun = project && activeEntry ? [...project.runs].reverse().find((r) => r.planId === activeEntry.id) ?? null : null;
   const stale = !!(project && latestRun && !isCurrent(project, latestRun));
 
+  const viewIndex = VIEWS.findIndex((v) => v.id === view);
+  const engineChip = engineStatus.state === 'ready' ? 'ok' : engineStatus.state === 'loading' ? 'warn' : engineStatus.state === 'error' ? 'bad' : 'idle';
+
   return (
     <div className="app">
-      <header className="top">
-        <h1 className="brand">FORKING PATHS</h1>
-        <nav className="views" aria-label="Workspace">
-          {VIEWS.map((v) => (
-            <button key={v.id} className={`view-tab${view === v.id ? ' active' : ''}`} aria-current={view === v.id ? 'page' : undefined} onClick={() => setView(v.id)} title={`${v.label} (${v.key})`}>
-              <span className="view-key" aria-hidden="true">{v.key}</span> {v.label}
-              {v.id === 'results' && stale && <span className="badge warn" title="Results are stale">stale</span>}
-            </button>
-          ))}
-        </nav>
-        <div className="runtime small" role="status" aria-live="polite">
-          {engineStatus.state === 'idle' && <span className="muted">Python engine loads when you run an analysis</span>}
-          {engineStatus.state === 'loading' && <span>Loading engine: {engineStatus.stage?.stage ?? 'starting'} ({engineStatus.stage?.done ?? 0}/{engineStatus.stage?.total ?? 4})</span>}
-          {engineStatus.state === 'ready' && <span className="ok-text">engine ready{engineStatus.runtime ? ` · Python ${engineStatus.runtime.python} · NumPy ${engineStatus.runtime.numpy} · SciPy ${engineStatus.runtime.scipy}` : ''}</span>}
-          {engineStatus.state === 'error' && <span className="bad-text">engine unavailable</span>}
+      <header className="top" ref={headerRef}>
+        <div className="top-inner">
+          <a className="brand" href="./" aria-label="Forking Paths home">
+            <span className="brand-mark" aria-hidden="true">FP</span>
+            <span className="brand-name">Forking Paths</span>
+          </a>
+          <nav className="views" aria-label="Workspace">
+            {VIEWS.map((v) => (
+              <button key={v.id} className={`view-tab${view === v.id ? ' active' : ''}`} aria-current={view === v.id ? 'page' : undefined} onClick={() => setView(v.id)} title={`${v.label} (${v.key})`}>
+                <span className="view-label">{v.label}</span><span className="view-key" aria-hidden="true">[{v.key}]</span>
+                {v.id === 'results' && stale && <span className="badge warn" title="Results are stale">stale</span>}
+              </button>
+            ))}
+          </nav>
+          <div className={`runtime engine-${engineChip}`} role="status" aria-live="polite">
+            <span className="dot" aria-hidden="true" />
+            {engineStatus.state === 'idle' && <span>engine loads on first run</span>}
+            {engineStatus.state === 'loading' && <span>Loading engine: {engineStatus.stage?.stage ?? 'starting'} ({engineStatus.stage?.done ?? 0}/{engineStatus.stage?.total ?? 4})</span>}
+            {engineStatus.state === 'ready' && <span>engine ready{engineStatus.runtime ? <span className="runtime-versions">{` \u00b7 Python ${engineStatus.runtime.python} \u00b7 NumPy ${engineStatus.runtime.numpy} \u00b7 SciPy ${engineStatus.runtime.scipy}`}</span> : ''}</span>}
+            {engineStatus.state === 'error' && <span>engine unavailable</span>}
+          </div>
         </div>
       </header>
-      {project && (
-        <div className="project-line small">
-          <label className="sr-only" htmlFor="project-title">Project title</label>
-          <input id="project-title" className="title-input" value={project.title} onChange={(e) => update((p) => ({ ...p, title: e.target.value }))} />
-          <span className="muted">{project.dataset ? `${project.dataset.rowIds.length} rows · dataset ${project.dataset.hash.slice(0, 12)}` : 'no dataset accepted'}{project.source?.synthetic ? ' · synthetic' : ''}</span>
-        </div>
-      )}
-      {error && <div className="notice bad" role="alert">{error} <button className="btn ghost" onClick={() => setError(null)}>dismiss</button></div>}
-      {engineStatus.state === 'error' && <div className="notice bad" role="alert">The Python engine could not load: {engineStatus.error} <button className="btn ghost" onClick={() => setEngineStatus({ state: 'idle' })}>retry</button></div>}
-      {storageProblem && <div className="notice warn" role="alert">{storageProblem}</div>}
-      <main className="main">
-        <ErrorBoundary resetKey={view}>
-        {!project && <p className="empty">Loading the example project…</p>}
-        {project && view === 'data' && <DataView project={project} setProject={setProject} update={update} openExample={openExample} onContinue={() => setView('plan')} />}
-        {project && view === 'plan' && <PlanView project={project} update={update} onRun={(id) => void runPlan(id)} running={!!running} />}
-        {project && view === 'results' && (
-          <ResultsView project={project} update={update} engine={engine} ensureEngine={ensureEngine} engineStatus={engineStatus} running={running} onRun={(id) => void runPlan(id)} onCancel={cancelRun} />
+      <div className="page">
+        {project && (
+          <section className="hero" aria-label="Project">
+            <p className="eyebrow">{String(viewIndex + 1).padStart(2, '0')} / {VIEWS[viewIndex].label}<span className="eyebrow-sep">{' \u00b7 '}</span><span className="eyebrow-muted">{VIEW_INTRO[view]}</span></p>
+            <label className="sr-only" htmlFor="project-title">Project title</label>
+            <textarea id="project-title" className="title-input" rows={1} spellCheck={false} value={project.title} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }} onChange={(e) => update((p) => ({ ...p, title: e.target.value.replace(/\n/g, ' ') }))} />
+            <ul className="plain meta-chips" aria-label="Project facts">
+              {project.dataset ? (
+                <>
+                  <li className="chip">{project.dataset.rowIds.length.toLocaleString()} rows</li>
+                  <li className="chip">{project.dataset.columns.length} columns</li>
+                  <li className="chip mono">dataset {project.dataset.hash.slice(0, 12)}</li>
+                </>
+              ) : <li className="chip warn">no dataset accepted</li>}
+              {project.source?.synthetic && <li className="chip">synthetic</li>}
+              <li className="chip">{project.plans.length} plan{project.plans.length === 1 ? '' : 's'}</li>
+              <li className="chip">{project.runs.length} result{project.runs.length === 1 ? '' : 's'}</li>
+            </ul>
+          </section>
         )}
-        {project && view === 'export' && <ExportView project={project} setProject={setProject} engine={engine} ensureEngine={ensureEngine} />}
-        </ErrorBoundary>
-      </main>
+        {error && <div className="notice bad" role="alert">{error} <button className="btn ghost" onClick={() => setError(null)}>dismiss</button></div>}
+        {engineStatus.state === 'error' && <div className="notice bad" role="alert">The Python engine could not load: {engineStatus.error} <button className="btn ghost" onClick={() => setEngineStatus({ state: 'idle' })}>retry</button></div>}
+        {storageProblem && <div className="notice warn" role="alert">{storageProblem}</div>}
+        <main className={`main view-${view}`}>
+          <ErrorBoundary resetKey={view}>
+          {!project && <p className="empty">Loading the example project\u2026</p>}
+          {project && view === 'data' && <DataView project={project} setProject={setProject} update={update} openExample={openExample} onContinue={() => setView('plan')} />}
+          {project && view === 'plan' && <PlanView project={project} update={update} onRun={(id) => void runPlan(id)} running={!!running} />}
+          {project && view === 'results' && (
+            <ResultsView project={project} update={update} engine={engine} ensureEngine={ensureEngine} engineStatus={engineStatus} running={running} onRun={(id) => void runPlan(id)} onCancel={cancelRun} />
+          )}
+          {project && view === 'export' && <ExportView project={project} setProject={setProject} engine={engine} ensureEngine={ensureEngine} />}
+          </ErrorBoundary>
+        </main>
+        <footer className="foot">
+          <span>Forking Paths</span>
+          <span>Runs entirely in this browser. Nothing is uploaded.</span>
+          <span>keys 1-4 switch views</span>
+        </footer>
+      </div>
     </div>
   );
 }

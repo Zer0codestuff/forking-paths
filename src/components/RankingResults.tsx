@@ -30,7 +30,7 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
   };
   const byMedian = useMemo(() => [...result.summary.entities].map((e, i) => ({ ...e, idx: i })).sort((a, b) => (a.median ?? Infinity) - (b.median ?? Infinity) || a.id.localeCompare(b.id)), [result]);
   const [selected, setSelected] = useState<number[]>(() => byMedian.slice(0, 4).map((e) => e.idx));
-  const [focus, setFocus] = useState<number>(() => byMedian[0]?.idx ?? 0);
+  const [focus, setFocus] = useState<number>(() => mostSensitive(byMedian.slice(0, 4))?.idx ?? byMedian[0]?.idx ?? 0);
   const [mode, setMode] = useState<'chart' | 'table'>('chart');
   const [specIdx, setSpecIdx] = useState<number | null>(() => result.specs.find((s) => s.status === 'valid')?.index ?? null);
   const [pairState, setPair] = useState<{ idx: number[]; m: Array<Array<number | null>> } | null>(null);
@@ -73,7 +73,9 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
   return (
     <div className="ranking-results">
       {qErr && <p className="notice bad small" role="alert">{qErr}</p>}
-      <section className="panel">
+      <SectionNav items={RANK_SECTIONS} />
+      <RankingGlance rows={byMedian} validCount={validCount} topK={result.summary.topK} onFocus={(i) => { setFocus(i); setSelected((s) => (s.includes(i) ? s : s.length >= 8 ? [...s.slice(1), i] : [...s, i])); document.getElementById('fp-moves')?.scrollIntoView({ block: 'start' }); }} />
+      <section className="panel" id="fp-dist">
         <div className="row wrap between">
           <h3 className="h">Rank distributions across {validCount} valid specifications</h3>
           <div className="seg" role="group" aria-label="Display">
@@ -88,7 +90,7 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
       </section>
 
       <div className="two-col">
-        <section className="panel">
+        <section className="panel" id="fp-pairs">
           <h3 className="h">Pairwise ordering</h3>
           {selected.length < 2 ? <p className="muted small">Select at least two entities.</p> : !pair ? <p className="muted small">Computing…</p> : (
             <div className="table-wrap">
@@ -104,7 +106,7 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
             </div>
           )}
         </section>
-        <section className="panel">
+        <section className="panel" id="fp-moves">
           <h3 className="h">What moves {result.entities[focus]}</h3>
           {!inspectable ? <p className="muted small">The dataset changed after this result; decision views need the original data.</p> : !infl ? <p className="muted small">Computing…</p> : (
             <>
@@ -136,12 +138,12 @@ export function RankingResults({ project, plan, result, engine, ensureEngine, in
         </section>
       </div>
 
-      <section className="panel">
+      <section className="panel" id="fp-specs">
         <h3 className="h">Specifications</h3>
         <SpecTable result={result} ranks={ranks} scores={scores} entity={focus} S={S} E={E} selectedSpec={specIdx} onSelect={setSpecIdx} />
       </section>
 
-      <section className="panel" aria-live="polite">
+      <section className="panel" id="fp-selected" aria-live="polite">
         <h3 className="h">Selected specification {specIdx !== null ? `#${specIdx}` : ''}</h3>
         {!inspectable ? <p className="muted small">The dataset changed after this result, so its inputs cannot be shown faithfully.</p> : specIdx === null ? <p className="muted small">Select a specification.</p> : !detail ? <p className="muted small">Recomputing with full detail…</p> : <SpecDetail d={detail} />}
       </section>
@@ -212,6 +214,7 @@ function WeightScatter({ result, ranks, entity, indicator, setIndicator }: { res
   const E = result.entities.length;
   const pts = result.specs.filter((s) => s.status === 'valid' && s.weightsSource === 'sampled').map((s) => ({ w: s.weights[indicator], r: ranks[s.index * E + entity], i: s.index })).filter((p) => Number.isFinite(p.r));
   const W = 420, H = 200, l = 44, b = 30, t = 10, r = 10;
+  const constantRank = pts.length > 0 && pts.every((p) => p.r === pts[0].r);
   const maxR = Math.max(2, ...pts.map((p) => p.r));
   const x = (w: number) => l + w * (W - l - r);
   const y = (rk: number) => t + ((rk - 1) / Math.max(1, maxR - 1)) * (H - t - b);
@@ -220,6 +223,7 @@ function WeightScatter({ result, ranks, entity, indicator, setIndicator }: { res
       <label className="inline small">weight of
         <select className="input" value={indicator} onChange={(e) => setIndicator(e.target.value)}>{result.indicators.map((n) => <option key={n}>{n}</option>)}</select>
       </label>
+      {constantRank ? <p className="small muted">{result.entities[entity]} has rank {pts[0].r} in all {pts.length} sampled specifications, so the weight of {indicator} cannot move it. Nothing to plot.</p> : pts.length === 0 ? <p className="small muted">{result.entities[entity]} is not ranked in any sampled specification.</p> : (
       <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`Rank of ${result.entities[entity]} against the sampled weight of ${indicator}, one point per sampled specification`}>
         <line x1={l} x2={W - r} y1={H - b} y2={H - b} className="axis-line" /><line x1={l} x2={l} y1={t} y2={H - b} className="axis-line" />
         {[0, 0.25, 0.5, 0.75, 1].map((v) => <text key={v} x={x(v)} y={H - b + 14} className="axis" textAnchor="middle">{v}</text>)}
@@ -228,6 +232,7 @@ function WeightScatter({ result, ranks, entity, indicator, setIndicator }: { res
         <text x={10} y={t + 8} className="axis">rank</text>
         {pts.map((p) => <circle key={p.i} cx={x(p.w)} cy={y(p.r)} r={2.6} className="dot" />)}
       </svg>
+      )}
     </div>
   );
 }
@@ -299,5 +304,94 @@ function SpecDetail({ d }: { d: any }) {
         </table>
       </div>
     </div>
+  );
+}
+
+type Row = EntitySummary & { idx: number };
+
+const RANK_SECTIONS: Array<[string, string]> = [['fp-glance', 'at a glance'], ['fp-dist', 'distributions'], ['fp-pairs', 'pairwise'], ['fp-moves', 'what moves it'], ['fp-specs', 'specifications'], ['fp-selected', 'selected']];
+
+const spread = (e: EntitySummary) => (e.evaluated > 0 && e.p05 !== undefined && e.p95 !== undefined ? e.p95 - e.p05 : -1);
+
+/** The entity whose rank moves most between the 5th and 95th percentile (ties: better median first). */
+export function mostSensitive(rows: Row[]): Row | undefined {
+  return rows.reduce<Row | undefined>((best, e) => (spread(e) > (best ? spread(best) : -1) ? e : best), undefined);
+}
+
+export function SectionNav({ items }: { items: Array<[string, string]> }) {
+  const [active, setActive] = useState(items[0]?.[0]);
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const seen = new Map<string, boolean>();
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) seen.set(e.target.id, e.isIntersecting);
+      const first = items.find(([id]) => seen.get(id));
+      if (first) setActive(first[0]);
+    }, { rootMargin: '-120px 0px -55% 0px' });
+    for (const [id] of items) { const el = document.getElementById(id); if (el) io.observe(el); }
+    return () => io.disconnect();
+  }, [items]);
+  return (
+    <nav className="section-nav" aria-label="Sections of this result">
+      <p className="section-nav-title">on this result</p>
+      {items.map(([id, label], i) => (
+        <a key={id} href={`#${id}`} className={active === id ? 'active' : ''} aria-current={active === id ? 'location' : undefined} onClick={(e) => { e.preventDefault(); setActive(id); document.getElementById(id)?.scrollIntoView({ block: 'start' }); }}>
+          <span className="sn-dot" aria-hidden="true" /><span className="sn-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>{label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * Plain-language reading of the rank distributions. Every sentence is computed from the
+ * summary shown below it and describes the declared specification space only.
+ */
+function RankingGlance({ rows, validCount, topK, onFocus }: { rows: Row[]; validCount: number; topK: number; onFocus: (i: number) => void }) {
+  const ranked = rows.filter((e) => e.evaluated > 0);
+  if (!validCount || !ranked.length) return null;
+  const leaders = ranked.filter((e) => (e.best ?? 0) >= 0.95);
+  const mostFirst = [...ranked].sort((a, b) => (b.best ?? 0) - (a.best ?? 0))[0];
+  const stableTop = ranked.filter((e) => (e.topK ?? 0) >= 0.95);
+  const contested = ranked.filter((e) => (e.topK ?? 0) > 0.05 && (e.topK ?? 0) < 0.95);
+  const never = ranked.filter((e) => (e.topK ?? 0) === 0);
+  const sensitive = mostSensitive(ranked)!;
+  const steady = [...ranked].sort((a, b) => spread(a) - spread(b) || (a.median ?? 0) - (b.median ?? 0))[0];
+  const names = (xs: Row[], max = 4) => (
+    <>
+      {xs.slice(0, max).map((e, i) => <span key={e.id}>{i > 0 ? ', ' : ''}<button className="link" onClick={() => onFocus(e.idx)}>{e.id}</button></span>)}
+      {xs.length > max ? ` and ${xs.length - max} more` : ''}
+    </>
+  );
+  return (
+    <section className="panel glance" id="fp-glance" aria-label="At a glance">
+      <h3 className="h">At a glance</h3>
+      <ul className="plain glance-list">
+        <li className={leaders.length ? 'g-ok' : 'g-warn'}>
+          <span className="g-sym" aria-hidden="true">{leaders.length ? 'o' : '~'}</span>
+          {leaders.length
+            ? <span>{leaders.length === 1 ? <>{names(leaders)} ranks first in {leaders[0].best === 1 ? `all ${validCount}` : `${pct(leaders[0].best)} of the ${validCount}`} valid specifications.</> : <>{names(leaders)} each rank first in at least 95% of the {validCount} valid specifications (ties share a rank).</>}</span>
+            : <span>No entity ranks first everywhere. {names([mostFirst])} ranks first most often, in {pct(mostFirst.best)} of valid specifications.</span>}
+        </li>
+        <li className={contested.length ? 'g-warn' : 'g-ok'}>
+          <span className="g-sym" aria-hidden="true">{contested.length ? '~' : 'o'}</span>
+          <span>
+            {stableTop.length ? <>{stableTop.length} {stableTop.length === 1 ? 'entity is' : 'entities are'} in the top {topK} in at least 95% of them ({names(stableTop)}). </> : <>No entity is in the top {topK} in at least 95% of them. </>}
+            {contested.length ? <>{contested.length} more move in and out of the top {topK} depending on the decisions.</> : <>Membership of the top {topK} does not depend on the decisions.</>}
+          </span>
+        </li>
+        <li className="g-warn">
+          <span className="g-sym" aria-hidden="true">{'<>'}</span>
+          <span>Most sensitive: {names([sensitive])}, between rank {num(sensitive.p05!, 0)} and {num(sensitive.p95!, 0)} (5th to 95th percentile). Steadiest: {names([steady])}, {spread(steady) === 0 ? `always rank ${num(steady.median!, 0)}` : `between rank ${num(steady.p05!, 0)} and ${num(steady.p95!, 0)}`}.</span>
+        </li>
+        {never.length > 0 && (
+          <li className="g-muted">
+            <span className="g-sym" aria-hidden="true">-</span>
+            <span>{never.length} {never.length === 1 ? 'entity never reaches' : 'entities never reach'} the top {topK} in any valid specification.</span>
+          </li>
+        )}
+      </ul>
+      <p className="small muted">Shares describe the declared specification space, not the probability that a ranking is true. Select a name to see what moves it.</p>
+    </section>
   );
 }

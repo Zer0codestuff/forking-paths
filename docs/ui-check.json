@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-08T15:12:40.006Z",
+  "generatedAt": "2026-11-08T17:53:39.104Z",
   "browser": "Chromium headless (Playwright)",
   "timings": {
-    "coldLoadAndRunMs": 10916,
-    "warmRunMs": 513
+    "coldLoadAndRunMs": 11467,
+    "warmRunMs": 531
   },
   "results": [
     {
@@ -29,10 +29,25 @@
     {
       "name": "ranking run reports valid and invalid separately",
       "ok": true,
-      "detail": "valid 378invalid 126cancelled 0uncomputed 0"
+      "detail": "valid 378specifications with a resultinvalid 126rejected by an explicit rulecancelled 0stopped by youuncomputed 0beyond the limit"
     },
     {
       "name": "selected run shows normalized values and contributions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "at a glance states the known leader from the summary",
+      "ok": true,
+      "detail": "At a glanceoAlder ranks first in all 378 valid specifications.~1 entity is in the top 5 in at least 95% of them (Alder). 15 more move in and out of the top 5 depending on the decisions.<>Most sensitive: Iris, between rank 6 and 28 (5th to 95th percentile). Steadiest: Alder, always rank 1.-10 entities never reach the top 5 in any valid specification.Shares describe the declared specification space, not the probability that a ranking is true. Select a name to see what moves it."
+    },
+    {
+      "name": "default focus is a sensitive entity, not the constant leader",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "names in the summary focus that entity",
       "ok": true,
       "detail": ""
     },
@@ -64,7 +79,7 @@
     {
       "name": "cancel stops the run and counts cancelled specifications",
       "ok": true,
-      "detail": "valid 176invalid 0cancelled 19824uncomputed 28024"
+      "detail": "valid 128specifications with a resultinvalid 0rejected by an explicit rulecancelled 19872stopped by youuncomputed 28024beyond the limit"
     },
     {
       "name": "the interface stayed responsive during the run",
@@ -102,6 +117,11 @@
       "detail": ""
     },
     {
+      "name": "at a glance names the decision that flips the sign",
+      "ok": true,
+      "detail": ""
+    },
+    {
       "name": "pooled estimates are positive and department-adjusted estimates negative",
       "ok": true,
       "detail": "[[\"none\",0.732],[\"none\",0.732],[\"none\",0.732],[\"none\",0.732],[\"department\",-0.651],[\"department\",-0.651]]"
@@ -124,7 +144,7 @@
     {
       "name": "specifications beyond the limit are reported as uncomputed",
       "ok": true,
-      "detail": "valid 338invalid 174cancelled 0uncomputed 268"
+      "detail": "valid 338specifications with a resultinvalid 174rejected by an explicit rulecancelled 0stopped by youuncomputed 268beyond the limit"
     },
     {
       "name": "the computed subset is described",
