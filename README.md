@@ -21,6 +21,10 @@ npm run build && npm run preview
 
 `setup:runtime` is the only step that needs the network. After it, the app and its Python runtime are served locally and work offline.
 
+## Interface
+
+The interface follows the visual language of [gabrielemonni.me](https://gabrielemonni.me): black field, Martian Mono headings, JetBrains Mono text, numbered sections and indexed navigation (`DATA [1]` to `EXPORT [4]`). The project title and its facts (rows, columns, dataset hash, plans, results) sit at the top of every view; the run bar stays in view while you edit decisions or read results.
+
 ## Workflows
 
 ### Ranking robustness
@@ -36,6 +40,8 @@ A table with one entity identifier and several numeric indicators. For each indi
 
 Explicit rules cover constant indicators (the specification is invalid, or the indicator is dropped and weights renormalized), ties (best rank or average rank), and invalid values. Scores are rounded to 12 significant digits before ranking so floating-point noise never breaks a tie.
 
+Results open with the four outcome counts (valid, invalid, cancelled, uncomputed) and an **At a glance** summary: which entity, if any, ranks first in at least 95% of valid specifications, which entities stay in the top k and how many move in and out of it, and the most sensitive and steadiest entities. Every sentence is computed from the summary shown below it, and selecting a name focuses that entity in the decision views. By default the focus is the most sensitive of the four best entities by median rank, because an entity whose rank never moves has nothing to show there. A sticky section index on the left follows the reading position.
+
 Views: rank distributions per entity (chart and equivalent table), pairwise ordering, what moves a selected entity (rank by decision option, weight and rank correlation, weight and rank scatter), every specification with its status, and the selected specification's raw values, normalized values, contributions and final scores.
 
 A top-k fraction is the share of evaluated specifications, under the declared sampling scheme, in which the entity ranks in the top k. It is not the probability that a ranking is true, and sampled weights do not define a confidence interval.
@@ -47,6 +53,7 @@ A restricted family of linear regressions on the same engine. The effect is the 
 - A log outcome estimates a different quantity, so it is a separate estimand and is never pooled with the untransformed coefficient.
 - The declared sampling unit decides which intervals are valid. Independent rows: classical or HC3 t intervals, or a pairs bootstrap. Clustered rows: CR1 cluster-robust intervals (5 or more clusters) or a cluster bootstrap. Time-ordered or repeated rows: no interval method is offered, because none of these is valid there; estimates are still shown and labelled.
 - The specification curve and its decision matrix show every tested alternative, with an accessible table.
+- An **At a glance** summary reports how many valid specifications give a positive or a negative estimate, which decision lines up exactly with the sign when one does (otherwise the decision that moves the median estimate most), the range of estimates and how many intervals exclude zero.
 
 Results are exploratory. The fraction of specifications with a positive estimate is not a posterior probability, and running many specifications does not correct for multiple testing or establish causation.
 
@@ -110,7 +117,7 @@ Tolerance: specification statuses and ranks must match exactly; scores within 1e
 | `npm run test:py` | 25 passed |
 | `npm test` | 6 passed (including the cross-language dataset hash) |
 | `npm run typecheck` | clean |
-| `npm run build && npm run ui-check` | 42 of 42 browser checks (see `docs/ui-check.json` and [docs/VERIFICATION.md](docs/VERIFICATION.md)) |
+| `npm run build && npm run ui-check` | 46 of 46 browser checks (see `docs/ui-check.json` and [docs/VERIFICATION.md](docs/VERIFICATION.md)) |
 | Browser vs CPython | identical rank, score and status digests (504 specifications of the synthetic example, Pyodide NumPy 2.4.6 vs CPython NumPy 1.26.4) |
 | Benchmark | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) |
 
